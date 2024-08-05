@@ -14,17 +14,47 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
     const githubAPI = new GitHubAPI();
     const taskCache = new TaskCache(options.path || process.cwd());
 
-    // Fetch pull request details
-    spinner.start('Fetching pull request details...');
-    const prNumber = await input({ message: 'Enter the pull request number:' });
-    const prDetails = await githubAPI.getPullRequestDetails(Number(prNumber));
-    spinner.succeed('Pull request details fetched successfully');
+    // Get repository information
+    const repoInfo = await taskCache.getRepoInfo();
+    if (!repoInfo) {
+      throw new Error('Unable to determine repository information');
+    }
+    const { owner, repo } = repoInfo;
+
+    // Check for existing PR or create a new one
+    spinner.start('Checking for existing pull request...');
+    const branchName = await taskCache.getCurrentBranch();
+    let prInfo = await githubAPI.checkForExistingPR(owner, repo, branchName);
+
+    if (!prInfo) {
+      spinner.text = 'Creating new pull request...';
+      const title = await input({ message: 'Enter pull request title:' });
+      const body = await input({ message: 'Enter pull request description:' });
+      prInfo = await githubAPI.createPullRequest(
+        owner,
+        repo,
+        branchName,
+        title,
+        body,
+      );
+      await taskCache.setPRInfo(prInfo);
+      spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
+    } else {
+      spinner.succeed(`Found existing pull request: ${prInfo.html_url}`);
+    }
 
     let iteration = 1;
     let continueIterating = true;
 
     while (continueIterating) {
       spinner.start(`Processing pull request iteration ${iteration}...`);
+
+      // Fetch PR details
+      const prDetails = await githubAPI.getPullRequestDetails(
+        owner,
+        repo,
+        prInfo.number,
+      );
 
       // Generate AI response based on pull request details
       const aiResponse = await generateAIResponseForPR(prDetails, options);
@@ -51,12 +81,22 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       switch (action) {
         case 'apply':
           // Apply changes to the pull request
-          await githubAPI.applyChangesToPR(prNumber, parsedResponse);
+          await githubAPI.applyChangesToPR(
+            owner,
+            repo,
+            prInfo.number,
+            parsedResponse,
+          );
           console.log(chalk.green('Changes applied to the pull request'));
           break;
         case 'comment':
           // Add a comment to the pull request
-          await githubAPI.addCommentToPR(prNumber, parsedResponse.summary);
+          await githubAPI.addCommentToPR(
+            owner,
+            repo,
+            prInfo.number,
+            parsedResponse.summary,
+          );
           console.log(chalk.green('Comment added to the pull request'));
           break;
         case 'skip':

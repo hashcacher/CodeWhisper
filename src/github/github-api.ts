@@ -3,6 +3,7 @@ import type {
   AIParsedResponse,
   GitHubIssue,
   PullRequestDetails,
+  PullRequestInfo,
 } from '../types';
 
 export class GitHubAPI {
@@ -155,17 +156,21 @@ export class GitHubAPI {
     }
   }
 
-  async getPullRequestDetails(prNumber: number): Promise<PullRequestDetails> {
+  async getPullRequestDetails(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<PullRequestDetails> {
     try {
       const { data: pr } = await this.octokit.pulls.get({
-        owner: 'owner',
-        repo: 'repo',
+        owner,
+        repo,
         pull_number: prNumber,
       });
 
       const { data: files } = await this.octokit.pulls.listFiles({
-        owner: 'owner',
-        repo: 'repo',
+        owner,
+        repo,
         pull_number: prNumber,
       });
 
@@ -189,6 +194,8 @@ export class GitHubAPI {
   }
 
   async applyChangesToPR(
+    owner: string,
+    repo: string,
     prNumber: number,
     changes: AIParsedResponse,
   ): Promise<void> {
@@ -204,17 +211,80 @@ export class GitHubAPI {
     }
   }
 
-  async addCommentToPR(prNumber: number, comment: string): Promise<void> {
+  async addCommentToPR(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    comment: string,
+  ): Promise<void> {
     try {
       await this.octokit.issues.createComment({
-        owner: 'owner',
-        repo: 'repo',
+        owner,
+        repo,
         issue_number: prNumber,
         body: comment,
       });
     } catch (error) {
       console.error('Error adding comment to pull request:', error);
       throw new Error('Failed to add comment to pull request');
+    }
+  }
+
+  async checkForExistingPR(
+    owner: string,
+    repo: string,
+    branchName: string,
+  ): Promise<PullRequestInfo | null> {
+    try {
+      const { data: pullRequests } = await this.octokit.pulls.list({
+        owner,
+        repo,
+        head: `${owner}:${branchName}`,
+        state: 'open',
+      });
+
+      if (pullRequests.length > 0) {
+        const pr = pullRequests[0];
+        return {
+          number: pr.number,
+          title: pr.title,
+          html_url: pr.html_url,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error checking for existing pull request:', error);
+      throw new Error('Failed to check for existing pull request');
+    }
+  }
+
+  async createPullRequest(
+    owner: string,
+    repo: string,
+    branchName: string,
+    title: string,
+    body: string,
+    baseBranch = 'main',
+  ): Promise<PullRequestInfo> {
+    try {
+      const { data: pullRequest } = await this.octokit.pulls.create({
+        owner,
+        repo,
+        title,
+        head: branchName,
+        base: baseBranch,
+        body,
+      });
+
+      return {
+        number: pullRequest.number,
+        title: pullRequest.title,
+        html_url: pullRequest.html_url,
+      };
+    } catch (error) {
+      console.error('Error creating pull request:', error);
+      throw new Error('Failed to create pull request');
     }
   }
 }
