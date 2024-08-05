@@ -135,7 +135,9 @@ async function generateAIResponseForPR(
   options: AiAssistedTaskOptions,
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
-  const templatePath = getTemplatePath('pr-review-prompt');
+  const templatePath = options.diff
+    ? getTemplatePath('codegen-diff-prompt')
+    : getTemplatePath('codegen-prompt');
   const templateContent = await fs.readFile(templatePath, 'utf-8');
 
   const customData = {
