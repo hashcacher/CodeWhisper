@@ -159,6 +159,12 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
     )
     .option('--undo', 'Undo the last AI-assisted task')
     .option('--redo', 'Redo the last task for the specified path', false)
+    .option('--plan', 'Use a plan', false)
+    .option(
+      '--editInstructions',
+      'Add specific instructions to the task description',
+      false,
+    )
     .action(async (options) => {
       if (options.redo) {
         try {

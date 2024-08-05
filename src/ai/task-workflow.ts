@@ -64,24 +64,27 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
     );
     spinner.succeed('Files processed successfully');
 
-    const planPrompt = await generatePlanPrompt(
-      processedFiles,
-      templateContent,
-      customData,
-      options,
-      basePath,
-    );
+    let generatedPlan: string | null = null;
+    if (options.plan) {
+      const planPrompt = await generatePlanPrompt(
+        processedFiles,
+        templateContent,
+        customData,
+        options,
+        basePath,
+      );
 
-    const generatedPlan = await generatePlan(planPrompt, modelKey, options);
+      generatedPlan = await generatePlan(planPrompt, modelKey, options);
 
-    // Cache the task data
-    taskCache.setTaskData(basePath, {
-      selectedFiles,
-      generatedPlan,
-      taskDescription,
-      instructions,
-      model: modelKey,
-    });
+      // Cache the task data
+      taskCache.setTaskData(basePath, {
+        selectedFiles,
+        generatedPlan,
+        taskDescription,
+        instructions,
+        model: modelKey,
+      });
+    }
 
     await continueTaskWorkflow(
       options,
@@ -174,19 +177,19 @@ async function getTaskInfo(
     }
   }
 
-  if (!instructions) {
-    if (options.instructions) {
-      instructions = options.instructions;
-    } else {
-      const cachedInstructions = await getCachedValue(
-        'instructions',
-        options.cachePath,
-      );
+  if (options.instructions) {
+    instructions = options.instructions;
+  } else {
+    const cachedInstructions = await getCachedValue(
+      'instructions',
+      options.cachePath,
+    );
+    if (options.editInstructions) {
       instructions = await getInstructions(
         cachedInstructions as string | undefined,
       );
-      await setCachedValue('instructions', instructions, options.cachePath);
     }
+    await setCachedValue('instructions', instructions, options.cachePath);
   }
 
   return { taskDescription, instructions };
@@ -317,12 +320,15 @@ export async function continueTaskWorkflow(
   options: AiAssistedTaskOptions,
   basePath: string,
   taskCache: TaskCache,
-  generatedPlan: string,
+  generatedPlan: string | null,
   modelKey: string,
 ) {
   const spinner = ora();
 
-  const reviewedPlan = await reviewPlan(generatedPlan);
+  let reviewedPlan = generatedPlan;
+  if (generatedPlan) {
+    reviewedPlan = await reviewPlan(generatedPlan);
+  }
 
   const codegenTemplatePath = options.diff
     ? getTemplatePath('codegen-diff-prompt')
@@ -374,7 +380,7 @@ async function prepareCodegenCustomData(
   codegenTemplateContent: string,
   taskCache: TaskCache,
   basePath: string,
-  reviewedPlan: string,
+  reviewedPlan: string | null,
   options: AiAssistedTaskOptions,
 ): Promise<Record<string, string>> {
   const codegenVariables = extractTemplateVariables(codegenTemplateContent);

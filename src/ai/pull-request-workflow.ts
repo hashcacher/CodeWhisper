@@ -145,11 +145,15 @@ async function generateAIResponseForPR(
     var_changedFiles: prDetails.changedFiles
       .map((file) => file.filename)
       .join('\n'),
+    var_prComments: prDetails.comments
+      .map((comment) => `${comment.user}: ${comment.body}`)
+      .join('\n'),
+    var_changesSummary: summarizeChanges(prDetails.changedFiles),
   };
 
   const processedFiles = await processFiles({
     ...options,
-    filter: prDetails.changedFiles.map((file) => file.filename),
+    filter: undefined, // Include all repository files
   });
 
   const prReviewPrompt = await generateMarkdown(
