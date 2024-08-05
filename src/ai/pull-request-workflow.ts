@@ -136,13 +136,12 @@ async function generateAIResponseForPR(
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
   const templatePath = options.diff
-    ? getTemplatePath('codegen-diff-prompt')
-    : getTemplatePath('codegen-prompt');
+    ? getTemplatePath('pr-diff-prompt')
+    : getTemplatePath('pr-prompt');
   const templateContent = await fs.readFile(templatePath, 'utf-8');
 
   const customData = {
-    var_prTitle: prDetails.title,
-    var_prDescription: prDetails.body,
+    var_pullRequest: JSON.stringify(prDetails),
     var_changedFiles: prDetails.changedFiles
       .map((file) => file.filename)
       .join('\n'),
