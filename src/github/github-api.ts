@@ -239,7 +239,7 @@ export class GitHubAPI {
       const { data: pullRequests } = await this.octokit.pulls.list({
         owner,
         repo,
-        head: `${owner}:${branchName}`,
+        head: `${branchName}`,
         state: 'open',
       });
 
@@ -272,7 +272,7 @@ export class GitHubAPI {
         owner,
         repo,
         title,
-        head: branchName,
+        head: `${branchName}`,
         base: baseBranch,
         body,
       });
