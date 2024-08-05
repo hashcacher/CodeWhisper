@@ -22,7 +22,6 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
     const { owner, repo } = repoInfo;
 
     // Check for existing PR or create a new one
-    spinner.start('Checking for existing pull request...');
     const branchName = await taskCache.getCurrentBranch();
     let prInfo = await githubAPI.checkForExistingPR(owner, repo, branchName);
 
@@ -30,6 +29,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       spinner.text = 'Creating new pull request...';
       const title = await input({ message: 'Enter pull request title:' });
       const body = await input({ message: 'Enter pull request description:' });
+      spinner.start('Checking for existing pull request...');
       prInfo = await githubAPI.createPullRequest(
         owner,
         repo,
