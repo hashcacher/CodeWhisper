@@ -166,4 +166,25 @@ export interface TaskData {
   instructions: string;
   timestamp: number;
   model: string;
+  prInfo?: PullRequestInfo;
+}
+
+export interface PullRequestInfo {
+  number: number;
+  title: string;
+  html_url: string;
+}
+
+export interface PullRequestDetails {
+  number: number;
+  title: string;
+  body: string;
+  html_url: string;
+  changedFiles: Array<{
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    changes: number;
+  }>;
 }
