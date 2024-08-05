@@ -52,17 +52,31 @@ export class TaskCache {
       if (!originRemote) {
         return null;
       }
-      const match = originRemote.refs.fetch.match(
-        /github\.com[:/]([^/]+)\/([^.]+)\.git/,
-      );
+      const match = this.parseGitHubUrl(originRemote.refs.fetch);
       if (!match) {
         return null;
       }
-      return { owner: match[1], repo: match[2] };
+      return match;
     } catch (error) {
       console.error('Error getting repository information:', error);
       return null;
     }
+  }
+
+  parseGitHubUrl(url: string) {
+    const sshRegex = /^git@github\.com:([^/]+)\/(.+?)(\.git)?$/;
+    const httpsRegex = /^https:\/\/github\.com\/([^/]+)\/(.+?)(\.git)?$/;
+
+    const match = url.match(sshRegex) || url.match(httpsRegex);
+
+    if (!match) {
+      return null;
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2],
+    };
   }
 
   async getCurrentBranch(): Promise<string> {
