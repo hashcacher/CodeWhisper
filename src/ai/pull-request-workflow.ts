@@ -1,9 +1,13 @@
 import { confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
+import fs from 'fs-extra';
 import ora from 'ora';
+import { processFiles } from '../core/file-processor';
+import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
 import type { AiAssistedTaskOptions, PullRequestDetails } from '../types';
 import { TaskCache } from '../utils/task-cache';
+import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
@@ -131,20 +135,34 @@ async function generateAIResponseForPR(
   options: AiAssistedTaskOptions,
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
-  const prompt = `
-Analyze the following pull request and provide suggestions for improvements:
+  const templatePath = getTemplatePath('pr-review-prompt');
+  const templateContent = await fs.readFile(templatePath, 'utf-8');
 
-Title: ${prDetails.title}
-Description: ${prDetails.body}
+  const customData = {
+    var_prTitle: prDetails.title,
+    var_prDescription: prDetails.body,
+    var_changedFiles: prDetails.changedFiles
+      .map((file) => file.filename)
+      .join('\n'),
+  };
 
-Changes:
-${prDetails.changedFiles.map((file) => `- ${file.filename}`).join('\n')}
+  const processedFiles = await processFiles({
+    ...options,
+    filter: prDetails.changedFiles.map((file) => file.filename),
+  });
 
-Please provide a summary of suggested improvements, focusing on code quality, potential bugs, and adherence to best practices.
-`;
+  const prReviewPrompt = await generateMarkdown(
+    processedFiles,
+    templateContent,
+    {
+      customData,
+      noCodeblock: options.noCodeblock,
+      lineNumbers: options.lineNumbers,
+    },
+  );
 
   return generateAIResponse(
-    prompt,
+    prReviewPrompt,
     {
       maxCostThreshold: options.maxCostThreshold,
       model: options.model,
