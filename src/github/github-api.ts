@@ -1,5 +1,9 @@
 import { Octokit } from '@octokit/rest';
-import type { GitHubIssue } from '../types';
+import type {
+  AIParsedResponse,
+  GitHubIssue,
+  PullRequestDetails,
+} from '../types';
 
 export class GitHubAPI {
   private octokit: Octokit;
@@ -148,6 +152,69 @@ export class GitHubAPI {
       }
       console.error('Unknown error fetching GitHub issue details:', error);
       throw new Error('Failed to fetch GitHub issue details: Unknown error');
+    }
+  }
+
+  async getPullRequestDetails(prNumber: number): Promise<PullRequestDetails> {
+    try {
+      const { data: pr } = await this.octokit.pulls.get({
+        owner: 'owner',
+        repo: 'repo',
+        pull_number: prNumber,
+      });
+
+      const { data: files } = await this.octokit.pulls.listFiles({
+        owner: 'owner',
+        repo: 'repo',
+        pull_number: prNumber,
+      });
+
+      return {
+        number: pr.number,
+        title: pr.title,
+        body: pr.body || '',
+        html_url: pr.html_url,
+        changedFiles: files.map((file) => ({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          changes: file.changes,
+        })),
+      };
+    } catch (error) {
+      console.error('Error fetching pull request details:', error);
+      throw new Error('Failed to fetch pull request details');
+    }
+  }
+
+  async applyChangesToPR(
+    prNumber: number,
+    changes: AIParsedResponse,
+  ): Promise<void> {
+    try {
+      // This is a placeholder implementation. In a real scenario, you would:
+      // 1. Create a new commit with the changes
+      // 2. Update the pull request branch with the new commit
+      console.log(`Applying changes to PR #${prNumber}`);
+      console.log('Changes:', JSON.stringify(changes, null, 2));
+    } catch (error) {
+      console.error('Error applying changes to pull request:', error);
+      throw new Error('Failed to apply changes to pull request');
+    }
+  }
+
+  async addCommentToPR(prNumber: number, comment: string): Promise<void> {
+    try {
+      await this.octokit.issues.createComment({
+        owner: 'owner',
+        repo: 'repo',
+        issue_number: prNumber,
+        body: comment,
+      });
+    } catch (error) {
+      console.error('Error adding comment to pull request:', error);
+      throw new Error('Failed to add comment to pull request');
     }
   }
 }

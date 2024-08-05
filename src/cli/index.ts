@@ -7,6 +7,7 @@ import fs from 'fs-extra';
 import ora from 'ora';
 import { applyTask } from '../ai/apply-task';
 import { getModelConfig, getModelNames } from '../ai/model-config';
+import { runPullRequestWorkflow } from '../ai/pull-request-workflow';
 import { redoLastTask } from '../ai/redo-task';
 import { runAIAssistedTask } from '../ai/task-workflow';
 import { processFiles } from '../core/file-processor';
@@ -179,6 +180,47 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
           console.error(chalk.red('Error in AI-assisted task:'), error);
           process.exit(1);
         }
+      }
+    });
+
+  program
+    .command('pr')
+    .description('Start a pull request-based workflow')
+    .option('-p, --path <path>', 'Path to the codebase', '.')
+    .option('-m, --model <modelId>', 'Specify the AI model to use')
+    .option(
+      '-df, --diff',
+      'Use the new diff mode for AI-generated code modifications',
+      false,
+    )
+    .option(
+      '-cw, --context-window <number>',
+      'Specify the context window for the AI model. Only applicable for Ollama models.',
+      parseOptionStringToInt,
+      undefined,
+    )
+    .option(
+      '-mt, --max-tokens <number>',
+      'Specify the max output tokens for the AI model. Only applicable for Ollama models.',
+      parseOptionStringToInt,
+      undefined,
+    )
+    .option(
+      '--log-ai-interactions',
+      'Enable logging of AI prompts, responses, and parsing results',
+      false,
+    )
+    .option(
+      '-max --max-cost-threshold <number>',
+      'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
+      Number.parseFloat,
+    )
+    .action(async (options) => {
+      try {
+        await runPullRequestWorkflow(options);
+      } catch (error) {
+        console.error(chalk.red('Error in pull request workflow:'), error);
+        process.exit(1);
       }
     });
 
