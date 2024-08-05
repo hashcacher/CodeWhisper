@@ -64,8 +64,8 @@ export type AiAssistedTaskOptions = Pick<
   githubIssueFilters?: string;
   issueNumber?: number;
   diff?: boolean;
+  plan?: boolean;
   context?: string[];
-  noPlan: boolean;
 };
 
 export type ProcessOptions = Pick<

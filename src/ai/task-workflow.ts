@@ -64,8 +64,7 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
     );
     spinner.succeed('Files processed successfully');
 
-    let generatedPlan: string | null = null;
-    if (!options.noPlan) {
+    if (options.plan) {
       const planPrompt = await generatePlanPrompt(
         processedFiles,
         templateContent,
@@ -74,7 +73,7 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
         basePath,
       );
 
-      generatedPlan = await generatePlan(planPrompt, modelKey, options);
+      const generatedPlan = await generatePlan(planPrompt, modelKey, options);
 
       // Cache the task data
       taskCache.setTaskData(basePath, {
@@ -84,15 +83,30 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
         instructions,
         model: modelKey,
       });
-    }
 
-    await continueTaskWorkflow(
-      options,
-      basePath,
-      taskCache,
-      generatedPlan,
-      modelKey,
-    );
+      await continueTaskWorkflow(
+        options,
+        basePath,
+        taskCache,
+        generatedPlan,
+        modelKey,
+      );
+    } else {
+      taskCache.setTaskData(basePath, {
+        selectedFiles,
+        generatedPlan: '',
+        taskDescription,
+        instructions,
+        model: modelKey,
+      });
+
+      await continueTaskWorkflowWithoutPlan(
+        options,
+        basePath,
+        taskCache,
+        modelKey,
+      );
+    }
   } catch (error) {
     spinner.fail('Error in AI-assisted task');
     console.error(
@@ -342,7 +356,60 @@ export async function continueTaskWorkflow(
     codegenTemplateContent,
     taskCache,
     basePath,
+    options,
     reviewedPlan,
+  );
+
+  spinner.start('Generating Codegen prompt...');
+  const codeGenPrompt = await generateCodegenPrompt(
+    options,
+    basePath,
+    taskCache,
+    codegenTemplateContent,
+    codegenCustomData,
+  );
+  spinner.succeed('Codegen prompt generated successfully');
+
+  const generatedCode = await generateCode(codeGenPrompt, modelKey, options);
+  const parsedResponse = parseAICodegenResponse(
+    generatedCode,
+    options.logAiInteractions,
+    options.diff,
+  );
+
+  if (options.dryRun) {
+    await handleDryRun(
+      basePath,
+      parsedResponse,
+      taskCache.getLastTaskData(basePath)?.taskDescription || '',
+    );
+  } else {
+    await applyCodeModifications(options, basePath, parsedResponse);
+  }
+
+  spinner.succeed('AI-assisted task completed! 🎉');
+}
+
+export async function continueTaskWorkflowWithoutPlan(
+  options: AiAssistedTaskOptions,
+  basePath: string,
+  taskCache: TaskCache,
+  modelKey: string,
+) {
+  const spinner = ora();
+
+  const codegenTemplatePath = options.diff
+    ? getTemplatePath('codegen-diff-no-plan-prompt')
+    : getTemplatePath('codegen-no-plan-prompt');
+
+  const codegenTemplateContent = await fs.readFile(
+    codegenTemplatePath,
+    'utf-8',
+  );
+  const codegenCustomData = await prepareCodegenCustomData(
+    codegenTemplateContent,
+    taskCache,
+    basePath,
     options,
   );
 
@@ -380,8 +447,8 @@ async function prepareCodegenCustomData(
   codegenTemplateContent: string,
   taskCache: TaskCache,
   basePath: string,
-  reviewedPlan: string | null,
   options: AiAssistedTaskOptions,
+  reviewedPlan?: string,
 ): Promise<Record<string, string>> {
   const codegenVariables = extractTemplateVariables(codegenTemplateContent);
   const lastTaskData = taskCache.getLastTaskData(basePath);
@@ -389,8 +456,11 @@ async function prepareCodegenCustomData(
   const codegenDataObj = {
     var_taskDescription: lastTaskData?.taskDescription || '',
     var_instructions: lastTaskData?.instructions || '',
-    var_plan: reviewedPlan,
-  };
+  } as Record<string, string>;
+
+  if (reviewedPlan) {
+    codegenDataObj.var_plan = reviewedPlan;
+  }
 
   return collectVariables(
     JSON.stringify(codegenDataObj),
