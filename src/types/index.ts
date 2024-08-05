@@ -65,6 +65,7 @@ export type AiAssistedTaskOptions = Pick<
   issueNumber?: number;
   diff?: boolean;
   context?: string[];
+  noPlan: boolean;
 };
 
 export type ProcessOptions = Pick<

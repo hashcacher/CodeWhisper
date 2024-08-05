@@ -65,7 +65,7 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
     spinner.succeed('Files processed successfully');
 
     let generatedPlan: string | null = null;
-    if (options.plan) {
+    if (!options.noPlan) {
       const planPrompt = await generatePlanPrompt(
         processedFiles,
         templateContent,
@@ -177,19 +177,19 @@ async function getTaskInfo(
     }
   }
 
-  if (options.instructions) {
-    instructions = options.instructions;
-  } else {
-    const cachedInstructions = await getCachedValue(
-      'instructions',
-      options.cachePath,
-    );
-    if (options.editInstructions) {
+  if (!instructions) {
+    if (options.instructions) {
+      instructions = options.instructions;
+    } else {
+      const cachedInstructions = await getCachedValue(
+        'instructions',
+        options.cachePath,
+      );
       instructions = await getInstructions(
         cachedInstructions as string | undefined,
       );
+      await setCachedValue('instructions', instructions, options.cachePath);
     }
-    await setCachedValue('instructions', instructions, options.cachePath);
   }
 
   return { taskDescription, instructions };

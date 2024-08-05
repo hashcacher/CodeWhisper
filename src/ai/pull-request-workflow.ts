@@ -76,48 +76,42 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       console.log(chalk.cyan('\nAI Suggestions:'));
       console.log(parsedResponse.summary);
 
-      // Prompt user for action
+      // Apply changes to the pull request
+      spinner.start('Applying changes to the pull request...');
+      await githubAPI.applyChangesToPR(
+        owner,
+        repo,
+        prInfo.number,
+        parsedResponse,
+      );
+      spinner.succeed('Changes applied to the pull request');
+
+      // Add a comment to the pull request
+      spinner.start('Adding comment to the pull request...');
+      await githubAPI.addCommentToPR(
+        owner,
+        repo,
+        prInfo.number,
+        `AI-generated changes have been applied to this pull request:\n\n${parsedResponse.summary}`,
+      );
+      spinner.succeed('Comment added to the pull request');
+
+      // Prompt user to continue or exit
       const action = await input({
-        message: 'Choose an action (apply/comment/skip/exit):',
-        default: 'comment',
+        message: 'Choose an action (continue/exit):',
+        default: 'continue',
       });
 
       switch (action) {
-        case 'apply':
-          // Apply changes to the pull request
-          await githubAPI.applyChangesToPR(
-            owner,
-            repo,
-            prInfo.number,
-            parsedResponse,
-          );
-          console.log(chalk.green('Changes applied to the pull request'));
-          break;
-        case 'comment':
-          // Add a comment to the pull request
-          await githubAPI.addCommentToPR(
-            owner,
-            repo,
-            prInfo.number,
-            parsedResponse.summary,
-          );
-          console.log(chalk.green('Comment added to the pull request'));
-          break;
-        case 'skip':
-          console.log(chalk.yellow('Skipping this iteration'));
+        case 'continue':
+          continueIterating = true;
           break;
         case 'exit':
           continueIterating = false;
           break;
         default:
-          console.log(chalk.red('Invalid action. Skipping this iteration'));
-      }
-
-      if (continueIterating) {
-        continueIterating = await confirm({
-          message: 'Do you want to continue iterating on this pull request?',
-          default: true,
-        });
+          console.log(chalk.yellow('Skipping this iteration'));
+          continueIterating = true;
       }
 
       iteration++;
@@ -137,7 +131,7 @@ async function generateAIResponseForPR(
   const modelConfig = getModelConfig(options.model);
   const templatePath = options.diff
     ? getTemplatePath('pr-diff-prompt')
-    : getTemplatePath('pr-prompt');
+    : getTemplatePath('pr-prompt'); // doesnt exist yet
   const templateContent = await fs.readFile(templatePath, 'utf-8');
 
   const customData = {
@@ -145,10 +139,6 @@ async function generateAIResponseForPR(
     var_changedFiles: prDetails.changedFiles
       .map((file) => file.filename)
       .join('\n'),
-    var_prComments: prDetails.comments
-      .map((comment) => `${comment.user}: ${comment.body}`)
-      .join('\n'),
-    var_changesSummary: summarizeChanges(prDetails.changedFiles),
   };
 
   const processedFiles = await processFiles({
