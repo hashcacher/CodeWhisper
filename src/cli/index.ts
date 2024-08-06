@@ -36,10 +36,13 @@ const templatesDir = getTemplatesDir();
 const program = new Command();
 
 export function cli(_args: string[]) {
+  const packageJson = JSON.parse(
+    fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+  );
   program
     .name('codewhisper')
     .description('A powerful tool for converting code to AI-friendly prompts')
-    .version('1.0.0');
+    .version(packageJson.version);
 
   program
     .command('list-models')
@@ -92,7 +95,7 @@ export function cli(_args: string[]) {
     .option(
       '-df, --diff',
       'Use the new diff mode for AI-generated code modifications',
-      true,
+      false,
     )
     .option('--no-diff', 'Use full file content for updates')
     .option(
@@ -167,7 +170,11 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       '',
     )
     .option('--undo', 'Undo the last AI-assisted task')
-    .option('--redo', 'Redo the last task for the specified path', false)
+    .option(
+      '--redo',
+      'Redo the last task for the specified path. Note: CodeWhisper saves the plan, instructions, model and selected files from the last task. Other options need to be specified again.',
+      false,
+    )
     .action(async (options) => {
       if (options.redo) {
         try {

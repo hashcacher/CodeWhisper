@@ -30,7 +30,6 @@ async function applyFileChange(
   dryRun: boolean,
 ): Promise<void> {
   const fullPath = path.join(basePath, file.path);
-
   try {
     switch (file.status) {
       case 'new':
@@ -73,7 +72,7 @@ async function applyFileChange(
             const updatedContent = applyPatch(currentContent, file.diff);
             if (updatedContent === false) {
               throw new Error(
-                `Failed to apply patch to file: ${file.path}\n A common cause is the the file was not sent to the LLM and it hallucinated the content. Try running the task again (task --redo) and selecting the problemtic file.`,
+                `Failed to apply patch to file: ${file.path}\nA common cause is that the file was not sent to the LLM and it hallucinated the content. Try running the task again (task --redo) and selecting the problematic file.`,
               );
             }
             await fs.writeFile(fullPath, updatedContent);
