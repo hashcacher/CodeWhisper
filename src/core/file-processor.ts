@@ -183,18 +183,22 @@ export async function getFileList(options: ProcessOptions): Promise<string[]> {
   });
 }
 
+export async function getFilePaths(options: ProcessOptions): Promise<string[]> {
+  return getFileList(options);
+}
+
 export async function processFiles(
   options: ProcessOptions,
+  filePaths?: string[],
 ): Promise<FileInfo[]> {
   const basePath = path.resolve(options.path ?? '.');
   const fileCache = new FileCache(options.cachePath ?? DEFAULT_CACHE_PATH);
-
-  const filePaths = await getFileList(options);
+  const paths = filePaths ?? await getFilePaths(options);
 
   const fileInfos: FileInfo[] = [];
   const cachePromises: Promise<void>[] = [];
 
-  for (const filePathStr of filePaths) {
+  for (const filePathStr of paths) {
     cachePromises.push(
       (async () => {
         try {

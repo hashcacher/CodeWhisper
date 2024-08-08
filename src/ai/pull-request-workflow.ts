@@ -68,8 +68,6 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 
     // Select relevant files using AI
     const selectedFiles = await selectFilesForPR(prDetails, options, basePath);
-    console.log(selectedFiles);
-    return;
 
     // Generate AI response based on pull request details
     const aiResponse = await generateAIResponseForPR(
@@ -147,11 +145,10 @@ async function generateAIResponseForPR(
   const customData = {
     var_pullRequest: JSON.stringify(prDetails),
   };
-  const processedFiles = await processFiles({
-    ...options,
-    filter: options.invert ? undefined : selectedFiles,
-    exclude: options.invert ? selectedFiles : options.exclude,
-  });
+  const processedFiles = await processFiles(
+    options,
+    selectedFiles,
+  );
 
   const prReviewPrompt = await generateMarkdown(
     processedFiles,

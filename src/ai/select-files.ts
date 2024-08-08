@@ -1,7 +1,9 @@
 import fs from 'fs-extra';
 import path from 'path';
+import Handlebars from 'handlebars';
 import { generateAIResponse } from './generate-ai-response';
 import type { PullRequestDetails } from '../types';
+import { getTemplatePath } from '../utils/template-utils';
 import {getFileList} from '../core/file-processor';
 
 /**
@@ -60,11 +62,22 @@ async function generateAIResponseForFileSelection(
   allFiles: string[],
   options,
 ): Promise<string> {
-  const prompt = `Given the following pull request details and list of files, select the files relevant to the pull request:\n\nPull Request Details:\n${JSON.stringify(
-    prDetails,
-  )}\n\nFiles:\n${allFiles.join('\n')}\n\nSelected Files:`;
-  console.log('file filter prompt', prompt)
-  return generateAIResponse(prompt, options);
+  const templatePath = getTemplatePath('files-relevant-to-pr');
+  const templateContent = await fs.readFile(templatePath, 'utf-8');
+  const template = Handlebars.compile(templateContent, {
+    noEscape: true,
+  });
+
+  const prompt = template({
+    pullRequestDetails: JSON.stringify(prDetails, null, 2),
+    files: allFiles,
+  });
+
+  console.log('file filter prompt', prompt);
+  return generateAIResponse(prompt, {
+    ...options,
+    model: options.model || 'gpt-3.5-turbo', // Ensure a default model is set
+  });
 }
 
 /**
@@ -77,9 +90,11 @@ function filterFilesBasedOnAIResponse(
   allFiles: string[],
   aiResponse: string,
 ): string[] {
-  const selectedFiles = aiResponse
+  const aiSelectedFiles = aiResponse
     .split('\n')
-    .map((file) => file.trim())
-    .filter((file) => allFiles.includes(file));
-  return selectedFiles;
+
+  // endsWith so we can match list markup like - file1.js, and 1. file1.js
+  return allFiles.filter((file) =>
+    aiSelectedFiles.some((selectedFile) => selectedFile.endsWith(file))
+  );
 }
