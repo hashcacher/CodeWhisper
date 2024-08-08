@@ -180,13 +180,26 @@ export class GitHubAPI {
         issue_number: prNumber,
       });
 
+      const { data: reviewComments } =
+        await this.octokit.pulls.listReviewComments({
+          owner,
+          repo,
+          pull_number: prNumber,
+        });
+
       return {
         title: pr.title,
         body: pr.body || '',
-        comments: comments.map(comment => ({
+        comments: comments.map((comment) => ({
           user: comment.user?.login || 'unknown',
           body: comment.body || '',
           created_at: comment.created_at,
+        })),
+        reviewComments: reviewComments.map((reviewComment) => ({
+          user: reviewComment.user?.login || 'unknown',
+          body: reviewComment.body || '',
+          created_at: reviewComment.created_at,
+          diff: reviewComment.diff_hunk,
         })),
       };
     } catch (error) {
