@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { generateAIResponse } from './generate-ai-response';
 import type { PullRequestDetails } from '../types';
+import {getFileList} from '../core/file-processor';
 
 /**
  * Gathers a list of all files in the repository and filters them based on AI's selection relevant to the PR.
@@ -15,10 +16,12 @@ export async function selectFilesForPR(
   basePath: string,
 ): Promise<string[]> {
   // Gather all files in the repository
-  const allFiles = await gatherAllFiles(basePath);
+  const allFiles = await getFileList(options);
+  console.log('all files', allFiles)
 
   // Generate AI response to select relevant files
   const aiResponse = await generateAIResponseForFileSelection(prDetails, allFiles, options);
+  console.log('ai response', aiResponse)
 
   // Filter the list of files to only those selected by the AI
   const selectedFiles = filterFilesBasedOnAIResponse(allFiles, aiResponse);
