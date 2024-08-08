@@ -17,6 +17,7 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
+import { selectFilesForPR } from './select-files';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -54,91 +55,70 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       spinner.succeed(`Found existing pull request: ${prInfo.html_url}`);
     }
 
-    let iteration = 1;
-    let continueIterating = true;
-
-    while (continueIterating) {
-      // spinner.start(`Processing pull request iteration ${iteration}...`);
-
-      // Fetch PR details
-      const prDetails = await githubAPI.getPullRequestDetails(
-        owner,
-        repo,
-        prInfo.number,
-      );
-      console.log(prDetails);
+    // Fetch PR details
+    const prDetails = await githubAPI.getPullRequestDetails(
+      owner,
+      repo,
+      prInfo.number,
+    );
+    console.log(prDetails);
+    if (!needsAction(prDetails)) {
       return;
-
-      // Generate AI response based on pull request details
-      const aiResponse = await generateAIResponseForPR(
-        prDetails,
-        options,
-        basePath,
-      );
-
-      // Parse AI response
-      const parsedResponse = parseAICodegenResponse(
-        aiResponse,
-        options.logAiInteractions,
-        options.diff,
-      );
-
-      if (options.dryRun) {
-        await handleDryRun(
-          basePath,
-          parsedResponse,
-          taskCache.getLastTaskData(basePath)?.taskDescription || '',
-        );
-      } else {
-        await applyCodeModifications(options, basePath, parsedResponse);
-      }
-
-      spinner.succeed(`Iteration ${iteration} processed`);
-
-      // Display AI suggestions
-      console.log(chalk.cyan('\nAI Suggestions:'));
-      console.log(parsedResponse.summary);
-
-      // Apply changes to the pull request
-      spinner.start('Applying changes to the pull request...');
-      await githubAPI.applyChangesToPR(
-        owner,
-        repo,
-        prInfo.number,
-        parsedResponse,
-      );
-      spinner.succeed('Changes applied to the pull request');
-
-      // Add a comment to the pull request
-      spinner.start('Adding comment to the pull request...');
-      await githubAPI.addCommentToPR(
-        owner,
-        repo,
-        prInfo.number,
-        `AI-generated changes have been applied to this pull request:\n\n${parsedResponse.summary}`,
-      );
-      spinner.succeed('Comment added to the pull request');
-
-      // Prompt user to continue or exit
-      const action = await input({
-        message: 'Choose an action (continue/exit):',
-        default: 'continue',
-      });
-
-      switch (action) {
-        case 'continue':
-          continueIterating = true;
-          break;
-        case 'exit':
-          continueIterating = false;
-          break;
-        default:
-          console.log(chalk.yellow('Skipping this iteration'));
-          continueIterating = true;
-      }
-
-      iteration++;
     }
+
+    // Select relevant files using AI
+    const selectedFiles = await selectFilesForPR(prDetails, options, basePath);
+    console.log(selectedFiles);
+    return;
+
+    // Generate AI response based on pull request details
+    const aiResponse = await generateAIResponseForPR(
+      prDetails,
+      options,
+      basePath,
+      selectedFiles,
+    );
+
+    // Parse AI response
+    const parsedResponse = parseAICodegenResponse(
+      aiResponse,
+      options.logAiInteractions,
+      options.diff,
+    );
+
+    if (options.dryRun) {
+      await handleDryRun(
+        basePath,
+        parsedResponse,
+        taskCache.getLastTaskData(basePath)?.taskDescription || '',
+      );
+    } else {
+      await applyCodeModifications(options, basePath, parsedResponse);
+    }
+
+    // Display AI suggestions
+    console.log(chalk.cyan('\nAI Suggestions:'));
+    console.log(parsedResponse.summary);
+
+    // Apply changes to the pull request
+    spinner.start('Applying changes to the pull request...');
+    await githubAPI.applyChangesToPR(
+      owner,
+      repo,
+      prInfo.number,
+      parsedResponse,
+    );
+    spinner.succeed('Changes applied to the pull request');
+
+    // Add a comment to the pull request
+    spinner.start('Adding comment to the pull request...');
+    await githubAPI.addCommentToPR(
+      owner,
+      repo,
+      prInfo.number,
+      `AI-generated changes have been applied to this pull request:\n\n${parsedResponse.summary}`,
+    );
+    spinner.succeed('Comment added to the pull request');
 
     console.log(chalk.green('Pull request workflow completed'));
   } catch (error) {
@@ -147,10 +127,16 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   }
 }
 
+async function needsAction(prDetails: PullRequestDetails) {
+  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  return lastComment.body.includes('AI-generated changes have been applied');
+}
+
 async function generateAIResponseForPR(
   prDetails: PullRequestDetails,
   options: AiAssistedTaskOptions,
   basePath: string,
+  selectedFiles: string[],
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
   const templatePath = options.diff
@@ -160,11 +146,7 @@ async function generateAIResponseForPR(
 
   const customData = {
     var_pullRequest: JSON.stringify(prDetails),
-    var_changedFiles: prDetails.changedFiles
-      .map((file) => file.filename)
-      .join('\n'),
   };
-  const selectedFiles = await selectFiles(options, basePath);
   const processedFiles = await processFiles({
     ...options,
     filter: options.invert ? undefined : selectedFiles,

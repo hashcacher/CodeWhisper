@@ -181,11 +181,6 @@ export interface PullRequestDetails {
   title: string;
   body: string;
   html_url: string;
-  changedFiles: Array<{
-    filename: string;
-    status: string;
-    additions: number;
-    deletions: number;
-    changes: number;
-  }>;
+  comments: any[];
+  reviewComments: any[];
 }

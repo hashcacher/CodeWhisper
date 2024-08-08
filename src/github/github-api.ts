@@ -198,8 +198,10 @@ export class GitHubAPI {
         reviewComments: reviewComments.map((reviewComment) => ({
           user: reviewComment.user?.login || 'unknown',
           body: reviewComment.body || '',
-          created_at: reviewComment.created_at,
-          diff: reviewComment.diff_hunk,
+          updated_at: reviewComment.updated_at,
+          commentContext: reviewComment.diff_hunk,
+          line: reviewComment.line,
+          path: reviewComment.path,
         })),
       };
     } catch (error) {
