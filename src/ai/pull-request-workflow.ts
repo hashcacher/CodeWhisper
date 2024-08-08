@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -11,10 +12,12 @@ import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
+import { selectFiles } from './task-workflow';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
+    const basePath = path.resolve(options.path ?? '.');
     const githubAPI = new GitHubAPI();
     const taskCache = new TaskCache(options.path || process.cwd());
 
@@ -61,7 +64,11 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       );
 
       // Generate AI response based on pull request details
-      const aiResponse = await generateAIResponseForPR(prDetails, options);
+      const aiResponse = await generateAIResponseForPR(
+        prDetails,
+        options,
+        basePath,
+      );
 
       // Parse AI response
       const parsedResponse = parseAICodegenResponse(
@@ -127,6 +134,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 async function generateAIResponseForPR(
   prDetails: PullRequestDetails,
   options: AiAssistedTaskOptions,
+  basePath: string,
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
   const templatePath = options.diff
@@ -140,10 +148,11 @@ async function generateAIResponseForPR(
       .map((file) => file.filename)
       .join('\n'),
   };
-
+  const selectedFiles = await selectFiles(options, basePath);
   const processedFiles = await processFiles({
     ...options,
-    filter: undefined, // Include all repository files
+    filter: options.invert ? undefined : selectedFiles,
+    exclude: options.invert ? selectedFiles : options.exclude,
   });
 
   const prReviewPrompt = await generateMarkdown(
@@ -156,6 +165,8 @@ async function generateAIResponseForPR(
     },
   );
 
+  console.log(chalk.cyan('\nPR Review Prompt:'));
+  console.log(prReviewPrompt);
   return generateAIResponse(
     prReviewPrompt,
     {

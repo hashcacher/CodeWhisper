@@ -196,7 +196,7 @@ async function getTaskInfo(
   return { taskDescription, instructions };
 }
 
-async function selectFiles(
+export async function selectFiles(
   options: AiAssistedTaskOptions,
   basePath: string,
 ): Promise<string[]> {

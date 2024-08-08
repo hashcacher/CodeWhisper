@@ -112,39 +112,17 @@ export async function generateAIResponse(
     client = familyConfig.initClient(apiKey);
   }
 
-  const estimatedInputTokens = estimateTokenCount(prompt, modelKey);
-  const estimatedOutputTokens = modelConfig.maxOutput;
-  const estimatedCost = estimateCost(
-    modelKey,
-    estimatedInputTokens,
-    estimatedOutputTokens,
-  );
+  const processedPrompt = prompt;
 
-  console.log(
-    chalk.yellow(`Estimated max cost: $${estimatedCost.toFixed(2)} USD`),
-  );
-
-  if (options.maxCostThreshold && estimatedCost > options.maxCostThreshold) {
-    const proceed = await confirmCostExceedsThreshold(
-      estimatedCost,
-      options.maxCostThreshold,
-    );
-    if (!proceed) {
-      console.log(chalk.red('Operation cancelled due to cost threshold.'));
-      return '';
-    }
-  }
-
-  let processedPrompt = prompt;
-
-  if (estimatedInputTokens > modelConfig.contextWindow) {
-    console.warn(
-      chalk.yellow(
-        `Truncating prompt to ${modelConfig.contextWindow} tokens...`,
-      ),
-    );
-    processedPrompt = truncateToContextLimit(processedPrompt, modelKey);
-  }
+  // const estimatedInputTokens = await tokenEstimationCheck(prompt, modelKey, modelConfig, options);
+  // if (estimatedInputTokens > modelConfig.contextWindow) {
+  //   console.warn(
+  //     chalk.yellow(
+  //       `Truncating prompt to ${modelConfig.contextWindow} tokens...`,
+  //     ),
+  //   );
+  //   processedPrompt = truncateToContextLimit(processedPrompt, modelKey);
+  // }
 
   logger.info('AI Prompt', { processedPrompt });
 
@@ -193,6 +171,39 @@ export async function generateAIResponse(
     throw error;
   }
 }
+
+async function tokenEstimationCheck(
+  prompt: string,
+  modelKey: string,
+  modelConfig: ReturnType<typeof getModelConfig>,
+  options: GenerateAIResponseOptions,
+) {
+  const estimatedInputTokens = estimateTokenCount(prompt, modelKey);
+  const estimatedOutputTokens = modelConfig.maxOutput;
+  const estimatedCost = estimateCost(
+    modelKey,
+    estimatedInputTokens,
+    estimatedOutputTokens,
+  );
+
+  console.log(
+    chalk.yellow(`Estimated max cost: $${estimatedCost.toFixed(2)} USD`),
+  );
+
+  if (options.maxCostThreshold && estimatedCost > options.maxCostThreshold) {
+    const proceed = await confirmCostExceedsThreshold(
+      estimatedCost,
+      options.maxCostThreshold,
+    );
+    if (!proceed) {
+      console.log(chalk.red('Operation cancelled due to cost threshold.'));
+      throw new Error('Operation cancelled due to cost threshold.');
+    }
+  }
+
+  return estimatedInputTokens;
+}
+
 async function confirmCostExceedsThreshold(
   estimatedCost: number,
   threshold: number,
