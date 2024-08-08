@@ -174,9 +174,20 @@ export class GitHubAPI {
         pull_number: prNumber,
       });
 
+      const { data: comments } = await this.octokit.issues.listComments({
+        owner,
+        repo,
+        issue_number: prNumber,
+      });
+
       return {
         title: pr.title,
         body: pr.body || '',
+        comments: comments.map(comment => ({
+          user: comment.user?.login || 'unknown',
+          body: comment.body || '',
+          created_at: comment.created_at,
+        })),
       };
     } catch (error) {
       console.error('Error fetching pull request details:', error);
