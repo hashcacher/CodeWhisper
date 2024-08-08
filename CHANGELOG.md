@@ -1,3 +1,19 @@
+## [1.14.1](https://github.com/gmickel/CodeWhisper/compare/v1.14.0...v1.14.1) (2024-08-08)
+
+
+### Bug Fixes
+
+* cleanup stdout output ([9a1f351](https://github.com/gmickel/CodeWhisper/commit/9a1f351490b2d46bd64270d709497e1628964a5b))
+* trigger release ([e5c8186](https://github.com/gmickel/CodeWhisper/commit/e5c81867ab19eeba41c557fe998e322451fafd8a))
+
+# [1.14.0](https://github.com/gmickel/CodeWhisper/compare/v1.13.6...v1.14.0) (2024-08-08)
+
+
+### Features
+
+* new diff mode ([#86](https://github.com/gmickel/CodeWhisper/issues/86)) ([b20e55b](https://github.com/gmickel/CodeWhisper/commit/b20e55b23bf0d0b2bc949d991df34c209671a676))
+* trigger release ([d646b46](https://github.com/gmickel/CodeWhisper/commit/d646b4632b82e23dd352898c052523802377cd58))
+
 ## [1.13.6](https://github.com/gmickel/CodeWhisper/compare/v1.13.5...v1.13.6) (2024-08-06)
 
 

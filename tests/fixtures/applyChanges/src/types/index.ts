@@ -1,3 +1,5 @@
+import type { ParsedDiff } from 'diff';
+
 export interface GitHubIssue {
   number: number;
   title: string;
@@ -95,6 +97,7 @@ export interface AIFileInfo {
   path: string;
   language: string;
   content?: string;
+  diff?: ParsedDiff;
   status: 'new' | 'modified' | 'deleted';
   explanation?: string;
 }
@@ -165,22 +168,6 @@ export interface TaskData {
   instructions: string;
   timestamp: number;
   model: string;
-  prInfo?: PullRequestInfo;
-}
-
-export interface PullRequestInfo {
-  number: number;
-  title: string;
-  html_url: string;
-}
-
-export interface PullRequestDetails {
-  number: number;
-  title: string;
-  body: string;
-  html_url: string;
-  comments: any[];
-  reviewComments: any[];
 }
 
 export interface AIFileChange {
@@ -192,6 +179,7 @@ export interface AIFileInfo {
   path: string;
   language: string;
   content?: string;
+  diff?: ParsedDiff;
   changes?: AIFileChange[];
   status: 'new' | 'modified' | 'deleted';
   explanation?: string;

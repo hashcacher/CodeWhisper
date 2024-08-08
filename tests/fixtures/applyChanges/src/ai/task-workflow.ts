@@ -195,7 +195,7 @@ async function getTaskInfo(
   return { taskDescription, instructions };
 }
 
-export async function selectFiles(
+async function selectFiles(
   options: AiAssistedTaskOptions,
   basePath: string,
 ): Promise<string[]> {
@@ -523,7 +523,7 @@ async function generateCode(
   return generatedCode;
 }
 
-export async function handleDryRun(
+async function handleDryRun(
   basePath: string,
   parsedResponse: AIParsedResponse,
   taskDescription: string,
@@ -555,7 +555,7 @@ export async function handleDryRun(
   console.log(chalk.blue('Potential Issues:'), parsedResponse.potentialIssues);
 }
 
-export async function applyCodeModifications(
+async function applyCodeModifications(
   options: AiAssistedTaskOptions,
   basePath: string,
   parsedResponse: AIParsedResponse,
