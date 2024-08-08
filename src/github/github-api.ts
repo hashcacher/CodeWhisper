@@ -175,17 +175,8 @@ export class GitHubAPI {
       });
 
       return {
-        number: pr.number,
         title: pr.title,
         body: pr.body || '',
-        html_url: pr.html_url,
-        changedFiles: files.map((file) => ({
-          filename: file.filename,
-          status: file.status,
-          additions: file.additions,
-          deletions: file.deletions,
-          changes: file.changes,
-        })),
       };
     } catch (error) {
       console.error('Error fetching pull request details:', error);

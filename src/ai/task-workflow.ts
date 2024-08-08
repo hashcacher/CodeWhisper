@@ -514,7 +514,7 @@ async function generateCode(
   return generatedCode;
 }
 
-async function handleDryRun(
+export async function handleDryRun(
   basePath: string,
   parsedResponse: AIParsedResponse,
   taskDescription: string,
@@ -546,7 +546,7 @@ async function handleDryRun(
   console.log(chalk.blue('Potential Issues:'), parsedResponse.potentialIssues);
 }
 
-async function applyCodeModifications(
+export async function applyCodeModifications(
   options: AiAssistedTaskOptions,
   basePath: string,
   parsedResponse: AIParsedResponse,

@@ -12,7 +12,11 @@ import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
-import { selectFiles } from './task-workflow';
+import {
+  applyCodeModifications,
+  handleDryRun,
+  selectFiles,
+} from './task-workflow';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -54,7 +58,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
     let continueIterating = true;
 
     while (continueIterating) {
-      spinner.start(`Processing pull request iteration ${iteration}...`);
+      // spinner.start(`Processing pull request iteration ${iteration}...`);
 
       // Fetch PR details
       const prDetails = await githubAPI.getPullRequestDetails(
@@ -62,6 +66,8 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
         repo,
         prInfo.number,
       );
+      console.log(prDetails);
+      return;
 
       // Generate AI response based on pull request details
       const aiResponse = await generateAIResponseForPR(
@@ -76,6 +82,16 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
         options.logAiInteractions,
         options.diff,
       );
+
+      if (options.dryRun) {
+        await handleDryRun(
+          basePath,
+          parsedResponse,
+          taskCache.getLastTaskData(basePath)?.taskDescription || '',
+        );
+      } else {
+        await applyCodeModifications(options, basePath, parsedResponse);
+      }
 
       spinner.succeed(`Iteration ${iteration} processed`);
 
