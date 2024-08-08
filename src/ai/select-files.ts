@@ -2,9 +2,9 @@ import fs from 'fs-extra';
 import path from 'path';
 import Handlebars from 'handlebars';
 import { generateAIResponse } from './generate-ai-response';
-import type { PullRequestDetails } from '../types';
+import type { PullRequestDetails, AiAssistedTaskOptions } from '../types';
 import { getTemplatePath } from '../utils/template-utils';
-import {getFileList} from '../core/file-processor';
+import { getFileList } from '../core/file-processor';
 
 /**
  * Gathers a list of all files in the repository and filters them based on AI's selection relevant to the PR.
@@ -14,16 +14,16 @@ import {getFileList} from '../core/file-processor';
  */
 export async function selectFilesForPR(
   prDetails: PullRequestDetails,
-  options,
+  options: AiAssistedTaskOptions,
   basePath: string,
 ): Promise<string[]> {
   // Gather all files in the repository
   const allFiles = await getFileList(options);
-  console.log('all files', allFiles)
+  console.log('all files', allFiles);
 
   // Generate AI response to select relevant files
   const aiResponse = await generateAIResponseForFileSelection(prDetails, allFiles, options);
-  console.log('ai response', aiResponse)
+  console.log('ai response', aiResponse);
 
   // Filter the list of files to only those selected by the AI
   const selectedFiles = filterFilesBasedOnAIResponse(allFiles, aiResponse);
@@ -60,7 +60,7 @@ async function gatherAllFiles(dir: string): Promise<string[]> {
 async function generateAIResponseForFileSelection(
   prDetails: PullRequestDetails,
   allFiles: string[],
-  options,
+  options: AiAssistedTaskOptions,
 ): Promise<string> {
   const templatePath = getTemplatePath('files-relevant-to-pr');
   const templateContent = await fs.readFile(templatePath, 'utf-8');
@@ -92,6 +92,8 @@ function filterFilesBasedOnAIResponse(
 ): string[] {
   const aiSelectedFiles = aiResponse
     .split('\n')
+    .map(file => file.trim())
+    .filter(file => file.length > 0);
 
   // endsWith so we can match list markup like - file1.js, and 1. file1.js
   return allFiles.filter((file) =>

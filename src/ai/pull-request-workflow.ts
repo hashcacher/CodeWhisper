@@ -137,9 +137,7 @@ async function generateAIResponseForPR(
   selectedFiles: string[],
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
-  const templatePath = options.diff
-    ? getTemplatePath('pr-diff-prompt')
-    : getTemplatePath('pr-prompt'); // doesnt exist yet
+  const templatePath = getTemplatePath('pr-diff-prompt')
   const templateContent = await fs.readFile(templatePath, 'utf-8');
 
   const customData = {
