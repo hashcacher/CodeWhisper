@@ -91,6 +91,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
         taskCache.getLastTaskData(basePath)?.taskDescription || '',
       );
     } else {
+      options.autoCommit = true;
       await applyCodeModifications(options, basePath, parsedResponse);
     }
 
