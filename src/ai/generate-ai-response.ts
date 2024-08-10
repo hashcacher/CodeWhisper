@@ -111,9 +111,11 @@ export async function generateAIResponse(
 
   let processedPrompt = prompt;
   const estimatedInputTokens = await tokenEstimationCheck(
-    prompt, modelKey, modelConfig, options,
-  )
-
+    prompt,
+    modelKey,
+    modelConfig,
+    options,
+  );
 
   if (estimatedInputTokens > modelConfig.contextWindow) {
     console.warn(
@@ -123,8 +125,6 @@ export async function generateAIResponse(
     );
     processedPrompt = truncateToContextLimit(processedPrompt, modelKey);
   }
-
-
 
   logger.info('AI Prompt', { processedPrompt });
   try {

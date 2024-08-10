@@ -205,3 +205,26 @@ export interface GenerateTextOptions {
   system?: string;
   prompt: string;
 }
+
+export interface AIFileChange {
+  search: string;
+  replace: string;
+}
+
+export interface AIFileInfo {
+  path: string;
+  language: string;
+  content?: string;
+  changes?: AIFileChange[];
+  status: 'new' | 'modified' | 'deleted';
+  explanation?: string;
+}
+
+export interface GenerateTextOptions {
+  // biome-ignore lint/suspicious/noExplicitAny: it's fine here
+  model: any;
+  maxTokens: number;
+  temperature: number;
+  system?: string;
+  prompt: string;
+}
