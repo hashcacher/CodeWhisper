@@ -203,6 +203,12 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
       Number.parseFloat,
     )
+    .option('--respect-gitignore', 'Respect entries in .gitignore', true)
+    .option(
+      '--no-respect-gitignore',
+      'Do not respect entries in .gitignore',
+      false,
+    )
     .action(async (options) => {
       try {
         await runPullRequestWorkflow(options);
