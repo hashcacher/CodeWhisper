@@ -8,12 +8,12 @@ import { generateAIResponse } from './generate-ai-response';
 
 /**
  * Gathers a list of all files in the repository and filters them based on AI's selection relevant to the PR.
- * @param prDetails - Pull request details
+ * @param prOrIssue - Pull request details
  * @param basePath - Base path of the repository
  * @returns A list of selected files relevant to the PR
  */
-export async function selectFilesForPR(
-  prDetails: PullRequestDetails,
+export async function selectFilesForPROrIssue(
+  prOrIssue: string,
   options: AiAssistedTaskOptions,
   basePath: string,
 ): Promise<string[]> {
@@ -23,7 +23,7 @@ export async function selectFilesForPR(
 
   // Generate AI response to select relevant files
   const aiResponse = await generateAIResponseForFileSelection(
-    prDetails,
+    prOrIssue,
     allFiles,
     options,
   );
@@ -62,7 +62,7 @@ async function gatherAllFiles(dir: string): Promise<string[]> {
  * @returns AI response containing the selected files
  */
 async function generateAIResponseForFileSelection(
-  prDetails: PullRequestDetails,
+  prDetails: string,
   allFiles: string[],
   options: AiAssistedTaskOptions,
 ): Promise<string> {
@@ -73,7 +73,7 @@ async function generateAIResponseForFileSelection(
   });
 
   const prompt = template({
-    pullRequestDetails: JSON.stringify(prDetails, null, 2),
+    pullRequestDetails: prDetails,
     files: allFiles,
   });
 

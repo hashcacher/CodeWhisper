@@ -7,7 +7,7 @@ import fs from 'fs-extra';
 import ora from 'ora';
 import { applyTask } from '../ai/apply-task';
 import { getModelConfig, getModelNames } from '../ai/model-config';
-import { runPullRequestWorkflow } from '../ai/pull-request-workflow';
+import { runPullRequestWorkflow, revisePullRequests } from '../ai/pull-request-workflow';
 import { redoLastTask } from '../ai/redo-task';
 import { runAIAssistedTask } from '../ai/task-workflow';
 import { undoTaskChanges } from '../ai/undo-task-changes';
@@ -203,6 +203,11 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
       Number.parseFloat,
     )
+    .option(
+      '--pr-number <number>',
+      'Specify a pull request number to use',
+      parseOptionStringToInt,
+    )
     .option('--respect-gitignore', 'Respect entries in .gitignore', true)
     .option(
       '--no-respect-gitignore',
@@ -214,6 +219,21 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
         await runPullRequestWorkflow(options);
       } catch (error) {
         console.error(chalk.red('Error in pull request workflow:'), error);
+      }
+    });
+
+  program
+    .command('revise-prs')
+    .description('Continuously revise pull requests with the "codewhisper" label')
+    .option('-p, --path <path>', 'Path to the codebase', '.')
+    .option('-m, --model <modelId>', 'Specify the AI model to use')
+    .option('--log-ai-interactions', 'Enable logging of AI prompts, responses, and parsing results', false)
+    .option('-max --max-cost-threshold <number>', 'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)', Number.parseFloat)
+    .action(async (options) => {
+      try {
+        await revisePullRequests(options);
+      } catch (error) {
+        console.error(chalk.red('Error in continuous PR revision:'), error);
       }
     });
 

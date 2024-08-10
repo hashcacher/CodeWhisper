@@ -4,7 +4,10 @@ import type {
   GitHubIssue,
   PullRequestDetails,
   PullRequestInfo,
+  LabeledItem,
 } from '../types';
+import { ensureValidBranchName, ensureBranch, createBranchAndCommit, getGitHubRepoInfo, findOriginalBranch } from '../utils/git-tools';
+import simpleGit, { SimpleGit } from 'simple-git';
 
 export class GitHubAPI {
   private octokit: Octokit;
@@ -262,26 +265,48 @@ ${parsedResponse.potentialIssues}
     owner: string,
     repo: string,
     branchName: string,
+    prNumber?: number,
   ): Promise<PullRequestInfo | null> {
     try {
-      const { data: pullRequests } = await this.octokit.pulls.list({
-        owner,
-        repo,
-        head: `${branchName}`,
-        state: 'open',
-      });
-
-      if (pullRequests.length > 0) {
-        const pr = pullRequests[0];
+      if (prNumber) {
+        const { data: pr } = await this.octokit.pulls.get({
+          owner,
+          repo,
+          pull_number: prNumber,
+        });
         return {
           number: pr.number,
           title: pr.title,
           html_url: pr.html_url,
         };
+      } else {
+        const { data: pullRequests } = await this.octokit.pulls.list({
+          owner,
+          repo,
+          head: `${owner}:${branchName}`,
+          state: 'open',
+        });
+
+        if (pullRequests.length > 0) {
+          const pr = pullRequests[0];
+          return {
+            number: pr.number,
+            title: pr.title,
+            html_url: pr.html_url,
+          };
+        }
       }
 
       return null;
     } catch (error) {
+      if (error instanceof Error && 'status' in error && error.status === 404) {
+        console.error(`Pull request not found: ${prNumber}`);
+        return {
+          number: prNumber || 0,
+          title: 'Not Found',
+          html_url: '',
+        };
+      }
       console.error('Error checking for existing pull request:', error);
       throw new Error('Failed to check for existing pull request');
     }
@@ -296,11 +321,14 @@ ${parsedResponse.potentialIssues}
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
     try {
+      const validBranchName = ensureValidBranchName(branchName);
+      await ensureBranch('.', validBranchName);
+
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
         repo,
         title,
-        head: `${branchName}`,
+        head: validBranchName,
         base: baseBranch,
         body,
       });
@@ -313,6 +341,169 @@ ${parsedResponse.potentialIssues}
     } catch (error) {
       console.error('Error creating pull request:', error);
       throw new Error('Failed to create pull request');
+    }
+  }
+
+  async getCodeWhisperLabeledItems(owner: string, repo: string): Promise<LabeledItem[]> {
+    try {
+      const issues = await this.octokit.paginate(this.octokit.issues.listForRepo, {
+        owner,
+        repo,
+        labels: 'codewhisper',
+        state: 'open',
+      });
+
+      return issues.map(item => ({
+        number: item.number,
+        title: item.title,
+        body: item.body || '',
+        html_url: item.html_url,
+        updated_at: item.updated_at,
+        pull_request: item.pull_request ? { url: item.pull_request.url } : undefined,
+      }));
+    } catch (error) {
+      console.error('Error fetching CodeWhisper labeled items:', error);
+      throw new Error('Failed to fetch CodeWhisper labeled items');
+    }
+  }
+
+  async getLastInteraction(owner: string, repo: string, number: number): Promise<string> {
+    try {
+      const { data: comments } = await this.octokit.issues.listComments({
+        owner,
+        repo,
+        issue_number: number,
+      });
+
+      if (comments.length === 0) {
+        return '';
+      }
+
+      const lastComment = comments[comments.length - 1];
+      return lastComment.user?.login || '';
+    } catch (error) {
+      console.error('Error fetching last interaction:', error);
+      throw new Error('Failed to fetch last interaction');
+    }
+  }
+
+  async createCommitOnPR(owner: string, repo: string, prNumber: number, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+    try {
+      // Get the PR details
+      const { data: pr } = await this.octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: prNumber,
+      });
+
+      await this.createCommitOnBranch(owner, repo, pr.head.ref, commitMessage, changes);
+
+      console.log(`Successfully created commit on PR #${prNumber}`);
+    } catch (error) {
+      console.error('Error creating commit on PR:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create commit on PR: ${error.message}`);
+      } else {
+        throw new Error('Failed to create commit on PR: Unknown error');
+      }
+    }
+  }
+
+  async createCommitOnBranch(owner: string, repo: string, branchName: string, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+    try {
+      const repoInfo = await getGitHubRepoInfo('.');
+      if (!repoInfo) {
+        throw new Error('Unable to get GitHub repository information');
+      }
+
+      const git: SimpleGit = simpleGit('.');
+      await ensureBranch('.', branchName);
+
+      // Apply changes to files
+      for (const file of changes.files) {
+        await git.add(file.path);
+      }
+
+      // Create commit
+      await createBranchAndCommit('.', branchName, commitMessage);
+
+      // Push changes to remote
+      await git.push('origin', branchName);
+
+      console.log(`Successfully created commit on branch ${branchName}`);
+    } catch (error) {
+      console.error('Error creating commit on branch:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create commit on branch: ${error.message}`);
+      } else {
+        throw new Error('Failed to create commit on branch: Unknown error');
+      }
+    }
+  }
+
+  async getDefaultBranch(owner: string, repo: string): Promise<string> {
+    try {
+      const { data: repository } = await this.octokit.repos.get({
+        owner,
+        repo,
+      });
+      return repository.default_branch;
+    } catch (error) {
+      console.error('Error getting default branch:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to get default branch: ${error.message}`);
+      } else {
+        throw new Error('Failed to get default branch: Unknown error');
+      }
+    }
+  }
+
+  async createBranch(owner: string, repo: string, branchName: string, baseBranch: string): Promise<void> {
+    try {
+      const git: SimpleGit = simpleGit('.');
+
+      // Fetch the latest changes from the remote
+      await git.fetch('origin');
+
+      // Ensure we're on the base branch
+      await git.checkout(baseBranch);
+      await git.pull('origin', baseBranch);
+
+      // Create and checkout the new branch
+      await ensureBranch('.', branchName);
+
+      // Push the new branch to the remote
+      await git.push('origin', branchName);
+
+      console.log(`Successfully created and pushed branch ${branchName} based on ${baseBranch}`);
+    } catch (error) {
+      console.error('Error creating/updating branch:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create/update branch: ${error.message}`);
+      } else {
+        throw new Error('Failed to create/update branch: Unknown error');
+      }
+    }
+  }
+
+  async createCommitOnPR(owner: string, repo: string, prNumber: number, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+    try {
+      const { data: pr } = await this.octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: prNumber,
+      });
+
+      await this.createCommitOnBranch(owner, repo, pr.head.ref, commitMessage, changes);
+
+      console.log(`Successfully created commit on PR #${prNumber}`);
+    } catch (error) {
+      console.error('Error creating commit on PR:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create commit on PR: ${error.message}`);
+      } else {
+        throw new Error('Failed to create commit on PR: Unknown error');
+      }
     }
   }
 }
