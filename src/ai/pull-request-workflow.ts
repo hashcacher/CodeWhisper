@@ -3,6 +3,7 @@ import { confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
+import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
@@ -40,8 +41,15 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
     if (!prInfo) {
       spinner.text = 'Creating new pull request...';
       const title = await input({ message: 'Enter pull request title:' });
-      const body = await input({ message: 'Enter pull request description:' });
-      spinner.start('Checking for existing pull request...');
+      let body = await input({ message: 'Enter pull request description:' });
+
+      // Extract issue number from branch name and link it to the PR
+      const issueNumber = extractIssueNumberFromBranch(branchName);
+      if (issueNumber) {
+        body = `Closes #${issueNumber}\n\n${body}`;
+      }
+
+      spinner.start('Creating new pull request...');
       prInfo = await githubAPI.createPullRequest(
         owner,
         repo,
