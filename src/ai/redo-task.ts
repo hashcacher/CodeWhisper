@@ -2,12 +2,13 @@ import path from 'node:path';
 import { confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
+import { processFiles } from '../core/file-processor';
 import { selectFilesPrompt } from '../interactive/select-files-prompt';
 import { selectModelPrompt } from '../interactive/select-model-prompt';
 import type { AiAssistedTaskOptions } from '../types';
 import { TaskCache } from '../utils/task-cache';
 import { getModelConfig } from './model-config';
-import { continueTaskWorkflow } from './task-workflow';
+import { handleNoPlanWorkflow, handlePlanWorkflow } from './task-workflow';
 
 export async function redoLastTask(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -44,12 +45,19 @@ export async function redoLastTask(options: AiAssistedTaskOptions) {
       default: false,
     });
 
+    const modelConfig = getModelConfig(modelKey);
+
     if (changeModel) {
       modelKey = await selectModelPrompt();
-      console.log(
-        chalk.blue(`Using new model: ${getModelConfig(modelKey).modelName}`),
-      );
+      console.log(chalk.blue(`Using new model: ${modelConfig.modelName}`));
     }
+
+    if (options.diff === undefined) {
+      options.diff = modelConfig.mode === 'diff';
+    }
+    console.log(
+      chalk.blue(`Using ${options.diff ? 'diff' : 'whole-file'} editing mode`),
+    );
 
     // Confirmation for changing file selection
     const changeFiles = await confirm({
@@ -77,13 +85,44 @@ export async function redoLastTask(options: AiAssistedTaskOptions) {
       });
     }
 
-    await continueTaskWorkflow(
-      { ...options, model: modelKey },
-      basePath,
-      taskCache,
-      lastTaskData.generatedPlan,
-      modelKey,
-    );
+    // Process files
+    spinner.start('Processing files...');
+    const processedFiles = await processFiles({
+      ...options,
+      path: basePath,
+      filter: options.invert ? undefined : selectedFiles,
+      exclude: options.invert ? selectedFiles : options.exclude,
+    });
+    spinner.succeed('Files processed successfully');
+
+    const updatedTaskData = {
+      ...lastTaskData,
+      model: modelKey,
+      selectedFiles,
+    };
+
+    // Determine whether to use plan or no-plan workflow based on the original task
+    const usePlanWorkflow = lastTaskData.generatedPlan !== '';
+
+    if (usePlanWorkflow) {
+      await handlePlanWorkflow(
+        { ...options, model: modelKey, plan: true },
+        basePath,
+        taskCache,
+        updatedTaskData,
+        processedFiles,
+        modelKey,
+      );
+    } else {
+      await handleNoPlanWorkflow(
+        { ...options, model: modelKey, plan: false },
+        basePath,
+        taskCache,
+        updatedTaskData,
+        processedFiles,
+        modelKey,
+      );
+    }
   } catch (error) {
     spinner.fail('Error in redoing AI-assisted task');
     console.error(

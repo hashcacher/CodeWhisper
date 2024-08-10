@@ -85,15 +85,11 @@ export const DEFAULT_IGNORES = [
   '**/temp',
 ];
 
-export async function processFiles(
-  options: ProcessOptions,
-): Promise<FileInfo[]> {
+export async function getFileList(options: ProcessOptions): Promise<string[]> {
   const basePath = path.resolve(options.path ?? '.');
   if (!(await fs.pathExists(basePath))) {
     throw new Error(`Path does not exist: ${basePath}`);
   }
-
-  const fileCache = new FileCache(options.cachePath ?? DEFAULT_CACHE_PATH);
 
   const gitignorePath = options.gitignore ?? DEFAULT_GITIGNORE;
 
@@ -112,9 +108,6 @@ export async function processFiles(
     followSymbolicLinks: false,
     caseSensitiveMatch: options.caseSensitive,
   };
-
-  const fileInfos: FileInfo[] = [];
-  const cachePromises: Promise<void>[] = [];
 
   const filters = options.filter || [];
 
@@ -152,6 +145,7 @@ export async function processFiles(
 
   return new Promise((resolve, reject) => {
     const globStream = fastGlob.stream(globPattern, globOptions);
+    const filePaths: string[] = [];
 
     globStream.on('data', (filePath) => {
       const filePathStr = path.resolve(filePath.toString());
@@ -178,52 +172,66 @@ export async function processFiles(
         return;
       }
 
-      cachePromises.push(
-        (async () => {
-          try {
-            const cached = await fileCache.get(normalizePath(filePathStr));
-            if (cached) {
-              fileInfos.push(cached);
-              return;
-            }
-
-            const stats = await fs.stat(filePathStr);
-            if (!stats.isFile()) return;
-
-            const buffer = await fs.readFile(filePathStr);
-            if (await isBinaryFile(buffer)) return;
-
-            const result = await pool.run({
-              filePath: filePathStr,
-              suppressComments: options.suppressComments,
-            });
-
-            if (result) {
-              await fileCache.set(
-                normalizePath(filePathStr),
-                result as FileInfo,
-              );
-              fileInfos.push(result as FileInfo);
-            }
-          } catch (error) {
-            console.error(`Error processing file ${filePathStr}:`, error);
-          }
-        })(),
-      );
+      filePaths.push(filePathStr);
     });
 
-    globStream.on('end', async () => {
-      try {
-        await Promise.all(cachePromises);
-        fileInfos.sort((a, b) => a.path.localeCompare(b.path));
-        await fileCache.flush();
-        resolve(fileInfos);
-      } catch (error) {
-        console.error('Error during file processing or cache flushing:', error);
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
+    globStream.on('end', () => {
+      resolve(filePaths);
     });
 
     globStream.on('error', reject);
   });
+}
+
+export async function getFilePaths(options: ProcessOptions): Promise<string[]> {
+  return getFileList(options);
+}
+
+export async function processFiles(
+  options: ProcessOptions,
+  filePaths?: string[],
+): Promise<FileInfo[]> {
+  const basePath = path.resolve(options.path ?? '.');
+  const fileCache = new FileCache(options.cachePath ?? DEFAULT_CACHE_PATH);
+  const paths = filePaths ?? await getFilePaths(options);
+
+  const fileInfos: FileInfo[] = [];
+  const cachePromises: Promise<void>[] = [];
+
+  for (const filePathStr of paths) {
+    cachePromises.push(
+      (async () => {
+        try {
+          const cached = await fileCache.get(normalizePath(filePathStr));
+          if (cached) {
+            fileInfos.push(cached);
+            return;
+          }
+
+          const stats = await fs.stat(filePathStr);
+          if (!stats.isFile()) return;
+
+          const buffer = await fs.readFile(filePathStr);
+          if (await isBinaryFile(buffer)) return;
+
+          const result = await pool.run({
+            filePath: filePathStr,
+            suppressComments: options.suppressComments,
+          });
+
+          if (result) {
+            await fileCache.set(normalizePath(filePathStr), result as FileInfo);
+            fileInfos.push(result as FileInfo);
+          }
+        } catch (error) {
+          console.error(`Error processing file ${filePathStr}:`, error);
+        }
+      })(),
+    );
+  }
+
+  await Promise.all(cachePromises);
+  fileInfos.sort((a, b) => a.path.localeCompare(b.path));
+  await fileCache.flush();
+  return fileInfos;
 }

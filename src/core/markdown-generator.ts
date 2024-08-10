@@ -94,7 +94,7 @@ export async function generateMarkdown(
     customData,
   );
 
-  const compiledTemplate = Handlebars.compile(preprocessedContent);
+  const compiledTemplate = Handlebars.compile(preprocessedContent, {noEscape: true});
 
   const data = {
     files,

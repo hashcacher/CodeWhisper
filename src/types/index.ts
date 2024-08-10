@@ -1,5 +1,3 @@
-import type { ParsedDiff } from 'diff';
-
 export interface GitHubIssue {
   number: number;
   title: string;
@@ -64,6 +62,7 @@ export type AiAssistedTaskOptions = Pick<
   githubIssueFilters?: string;
   issueNumber?: number;
   diff?: boolean;
+  plan?: boolean;
   context?: string[];
 };
 
@@ -96,7 +95,6 @@ export interface AIFileInfo {
   path: string;
   language: string;
   content?: string;
-  diff?: ParsedDiff;
   status: 'new' | 'modified' | 'deleted';
   explanation?: string;
 }
@@ -116,6 +114,7 @@ export interface GenerateAIResponseOptions {
   contextWindow?: number;
   maxTokens?: number;
   logAiInteractions?: boolean;
+  systemPrompt?: string;
 }
 
 export interface ApplyChangesOptions {
@@ -129,12 +128,9 @@ interface LLMPricing {
   outputCost: number;
 }
 
-export type ModelFamily =
-  | 'claude'
-  | 'openai'
-  | 'openai-compatible'
-  | 'groq'
-  | 'ollama';
+export type ModelFamily = 'claude' | 'openai' | 'openai-compatible' | 'ollama';
+
+export type EditingMode = 'diff' | 'whole';
 
 export interface ModelSpec {
   contextWindow: number;
@@ -143,6 +139,9 @@ export interface ModelSpec {
   pricing: LLMPricing;
   modelFamily: ModelFamily;
   temperature?: ModelTemperature;
+  mode?: EditingMode;
+  baseURL?: string;
+  apiKeyEnv?: string;
 }
 
 export interface ModelSpecs {
@@ -166,4 +165,43 @@ export interface TaskData {
   instructions: string;
   timestamp: number;
   model: string;
+  prInfo?: PullRequestInfo;
+}
+
+export interface PullRequestInfo {
+  number: number;
+  title: string;
+  html_url: string;
+}
+
+export interface PullRequestDetails {
+  number: number;
+  title: string;
+  body: string;
+  html_url: string;
+  comments: any[];
+  reviewComments: any[];
+}
+
+export interface AIFileChange {
+  search: string;
+  replace: string;
+}
+
+export interface AIFileInfo {
+  path: string;
+  language: string;
+  content?: string;
+  changes?: AIFileChange[];
+  status: 'new' | 'modified' | 'deleted';
+  explanation?: string;
+}
+
+export interface GenerateTextOptions {
+  // biome-ignore lint/suspicious/noExplicitAny: it's fine here
+  model: any;
+  maxTokens: number;
+  temperature: number;
+  system?: string;
+  prompt: string;
 }

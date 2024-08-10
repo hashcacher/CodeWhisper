@@ -1,0 +1,15 @@
+# Finding relevant files
+
+Given the following pull request details and list of files, select the files relevant to the pull request.
+
+<pull_request_details>
+{{pullRequestDetails}}
+</pull_request_details>
+
+<file_list>
+{{#each files}}
+- {{this}}
+{{/each}}
+</file_list>
+
+Just output a list of the relevant files.

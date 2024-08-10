@@ -7,11 +7,12 @@ import fs from 'fs-extra';
 import ora from 'ora';
 import { applyTask } from '../ai/apply-task';
 import { getModelConfig, getModelNames } from '../ai/model-config';
+import { runPullRequestWorkflow } from '../ai/pull-request-workflow';
 import { redoLastTask } from '../ai/redo-task';
 import { runAIAssistedTask } from '../ai/task-workflow';
+import { undoTaskChanges } from '../ai/undo-task-changes';
 import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
-import { undoTaskChanges } from '../git/undo-task-changes';
 import { runInteractiveMode } from '../interactive/interactive-workflow';
 import { DEFAULT_CACHE_PATH, clearCache } from '../utils/cache-utils';
 import { handleEditorAndOutput } from '../utils/editor-utils';
@@ -35,10 +36,13 @@ const templatesDir = getTemplatesDir();
 const program = new Command();
 
 export function cli(_args: string[]) {
+  const packageJson = JSON.parse(
+    fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+  );
   program
     .name('codewhisper')
     .description('A powerful tool for converting code to AI-friendly prompts')
-    .version('1.0.0');
+    .version(packageJson.version);
 
   program
     .command('list-models')
@@ -90,8 +94,20 @@ export function cli(_args: string[]) {
     )
     .option(
       '-df, --diff',
-      'Use the new diff mode for AI-generated code modifications',
-      false,
+      "Use the new diff mode for AI-generated code modifications (overwrites the model's editing mode settings)",
+    )
+    .option(
+      '--no-diff',
+      "Use the whole file edit mode for AI-generated code modifications (overwrites the model's editing mode settings)",
+    )
+    .option(
+      '--plan',
+      'Use the plan mode for AI-generated code modifications',
+      true,
+    )
+    .option(
+      '--no-plan',
+      'Directly provide the code modifications without the intermediate planning step',
     )
     .option(
       '-cw, --context-window <number>',
@@ -156,7 +172,11 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       '',
     )
     .option('--undo', 'Undo the last AI-assisted task')
-    .option('--redo', 'Redo the last task for the specified path', false)
+    .option(
+      '--redo',
+      'Redo the last task for the specified path. Note: CodeWhisper saves the plan, instructions, model and selected files from the last task. Other options need to be specified again.',
+      false,
+    )
     .action(async (options) => {
       if (options.redo) {
         try {
@@ -179,6 +199,53 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
           console.error(chalk.red('Error in AI-assisted task:'), error);
           process.exit(1);
         }
+      }
+    });
+
+  program
+    .command('pr')
+    .description('Start a pull request-based workflow')
+    .option('-p, --path <path>', 'Path to the codebase', '.')
+    .option('-m, --model <modelId>', 'Specify the AI model to use')
+    .option(
+      '-df, --diff',
+      'Use the new diff mode for AI-generated code modifications',
+      false,
+    )
+    .option(
+      '-cw, --context-window <number>',
+      'Specify the context window for the AI model. Only applicable for Ollama models.',
+      parseOptionStringToInt,
+      undefined,
+    )
+    .option(
+      '-mt, --max-tokens <number>',
+      'Specify the max output tokens for the AI model. Only applicable for Ollama models.',
+      parseOptionStringToInt,
+      undefined,
+    )
+    .option(
+      '--log-ai-interactions',
+      'Enable logging of AI prompts, responses, and parsing results',
+      false,
+    )
+    .option(
+      '-max --max-cost-threshold <number>',
+      'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
+      Number.parseFloat,
+    )
+    .option('--respect-gitignore', 'Respect entries in .gitignore', true)
+    .option(
+      '--no-respect-gitignore',
+      'Do not respect entries in .gitignore',
+      false,
+    )
+    .action(async (options) => {
+      try {
+        await runPullRequestWorkflow(options);
+      } catch (error) {
+        console.error(chalk.red('Error in pull request workflow:'), error);
+        process.exit(1);
       }
     });
 

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import simpleGit, { type SimpleGit } from 'simple-git';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { applyChanges } from '../../src/ai/apply-changes';
 import { generateAIResponse } from '../../src/ai/generate-ai-response';
 import { getInstructions } from '../../src/ai/get-instructions';
 import { getTaskDescription } from '../../src/ai/get-task-description';
@@ -10,7 +11,6 @@ import { reviewPlan } from '../../src/ai/plan-review';
 import { runAIAssistedTask } from '../../src/ai/task-workflow';
 import { processFiles } from '../../src/core/file-processor';
 import { generateMarkdown } from '../../src/core/markdown-generator';
-import { applyChanges } from '../../src/git/apply-changes';
 import { selectFilesPrompt } from '../../src/interactive/select-files-prompt';
 import { selectModelPrompt } from '../../src/interactive/select-model-prompt';
 import type {
@@ -29,7 +29,7 @@ vi.mock('../../src/core/markdown-generator');
 vi.mock('../../src/ai/generate-ai-response');
 vi.mock('../../src/ai/parse-ai-codegen-response');
 vi.mock('../../src/ai/plan-review');
-vi.mock('../../src/git/apply-changes');
+vi.mock('../../src/ai/apply-changes');
 vi.mock('../../src/utils/git-tools');
 vi.mock('../../src/ai/model-config');
 vi.mock('simple-git');
@@ -63,6 +63,7 @@ describe('runAIAssistedTask', () => {
     dryRun: false,
     noCodeblock: false,
     invert: false,
+    plan: true,
   };
 
   beforeEach(() => {
@@ -71,6 +72,140 @@ describe('runAIAssistedTask', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('should execute the happy path successfully with no planning step', async () => {
+    const mockTaskDescription = 'Test task description';
+    const mockInstructions = 'Test instructions';
+    const mockSelectedFiles = ['file1.ts', 'file2.ts'];
+    const mockProcessedFiles = [
+      {
+        path: 'file1.ts',
+        content: 'content1',
+        language: 'typescript',
+        size: 100,
+        created: new Date(),
+        modified: new Date(),
+        extension: 'ts',
+      },
+      {
+        path: 'file2.ts',
+        content: 'content2',
+        language: 'typescript',
+        size: 200,
+        created: new Date(),
+        modified: new Date(),
+        extension: 'ts',
+      },
+    ];
+    const mockGeneratedCode = `
+      <file_list>
+      file1.ts
+      file2.ts
+      </file_list>
+      <file>
+      <file_path>file1.ts</file_path>
+      <file_content language="typescript">
+      // Updated content for file1.ts
+      </file_content>
+      <file_status>modified</file_status>
+      </file>
+      <file>
+      <file_path>file2.ts</file_path>
+      <file_content language="typescript">
+      // Updated content for file2.ts
+      </file_content>
+      <file_status>modified</file_status>
+      </file>
+      <git_branch_name>feature/test-task</git_branch_name>
+      <git_commit_message>Implement test task</git_commit_message>
+      <summary>Updated both files</summary>
+      <potential_issues>None</potential_issues>
+    `;
+
+    const mockParsedResponse = {
+      gitBranchName: 'feature/test-task',
+      gitCommitMessage: 'Implement test task',
+      fileList: ['file1.ts', 'file2.ts'],
+      files: [
+        {
+          path: 'file1.ts',
+          content: '// Updated content for file1.ts',
+          language: 'typescript',
+          status: 'modified',
+        },
+        {
+          path: 'file2.ts',
+          content: '// Updated content for file2.ts',
+          language: 'typescript',
+          status: 'modified',
+        },
+      ],
+      summary: 'Updated both files',
+      potentialIssues: 'None',
+    };
+
+    const mockModelConfig: ModelSpec = {
+      contextWindow: 100000,
+      maxOutput: 4096,
+      modelName: 'Claude 3.5 Sonnet',
+      pricing: { inputCost: 3, outputCost: 15 },
+      modelFamily: 'claude',
+      temperature: {
+        planningTemperature: 0.5,
+        codegenTemperature: 0.3,
+      },
+    };
+
+    vi.mocked(getTaskDescription).mockResolvedValue(mockTaskDescription);
+    vi.mocked(getInstructions).mockResolvedValue(mockInstructions);
+    vi.mocked(selectFilesPrompt).mockResolvedValue(mockSelectedFiles);
+    vi.mocked(processFiles).mockResolvedValue(mockProcessedFiles);
+    vi.mocked(generateMarkdown).mockResolvedValue('Generated markdown');
+    vi.mocked(generateAIResponse).mockResolvedValueOnce(mockGeneratedCode);
+    vi.mocked(parseAICodegenResponse).mockReturnValue(
+      mockParsedResponse as unknown as AIParsedResponse,
+    );
+    vi.mocked(ensureBranch).mockResolvedValue('feature/test-task');
+    vi.mocked(applyChanges).mockResolvedValue();
+    vi.mocked(getModelConfig).mockReturnValue(mockModelConfig);
+
+    const mockOptionsWithoutPlan = {
+      ...mockOptions,
+      plan: false,
+      diff: false,
+    };
+
+    await runAIAssistedTask(mockOptionsWithoutPlan);
+
+    expect(getTaskDescription).toHaveBeenCalled();
+    expect(getInstructions).toHaveBeenCalled();
+    expect(processFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: expect.stringMatching(/[\\\/]test[\\\/]path$/),
+      }),
+    );
+    expect(generateMarkdown).toHaveBeenCalledTimes(1);
+    expect(generateAIResponse).toHaveBeenCalledTimes(1);
+    expect(reviewPlan).toHaveBeenCalledTimes(0);
+    expect(parseAICodegenResponse).toHaveBeenCalledWith(
+      mockGeneratedCode,
+      undefined,
+      false,
+    );
+
+    expect(ensureBranch).toHaveBeenCalledWith(
+      expect.stringMatching(/[\\\/]test[\\\/]path$/),
+      'feature/test-task',
+      { issueNumber: undefined },
+    );
+    expect(applyChanges).toHaveBeenCalledWith(
+      expect.objectContaining({
+        basePath: expect.stringMatching(/[\\\/]test[\\\/]path$/),
+        parsedResponse: mockParsedResponse,
+        dryRun: false,
+      }),
+    );
   });
 
   it('should execute the happy path successfully', async () => {
@@ -173,7 +308,12 @@ describe('runAIAssistedTask', () => {
     vi.mocked(applyChanges).mockResolvedValue();
     vi.mocked(getModelConfig).mockReturnValue(mockModelConfig);
 
-    await runAIAssistedTask(mockOptions);
+    const mockOptionsWithPlan = {
+      ...mockOptions,
+      diff: false,
+    };
+
+    await runAIAssistedTask(mockOptionsWithPlan);
 
     expect(getTaskDescription).toHaveBeenCalled();
     expect(getInstructions).toHaveBeenCalled();
@@ -188,7 +328,7 @@ describe('runAIAssistedTask', () => {
     expect(parseAICodegenResponse).toHaveBeenCalledWith(
       mockGeneratedCode,
       undefined,
-      undefined,
+      false,
     );
 
     expect(ensureBranch).toHaveBeenCalledWith(
@@ -205,16 +345,20 @@ describe('runAIAssistedTask', () => {
     );
   });
 
-  it('should handle diff-based updates when --diff flag is used', async () => {
-    const diffOptions = { ...mockOptions, diff: true };
+  it('should handle multiple changes when --diff flag is used', async () => {
+    const diffOptions = {
+      ...mockOptions,
+      model: 'claude-3-sonnet-20240229',
+      diff: true,
+    };
 
-    const mockTaskDescription = 'Test diff-based task';
-    const mockInstructions = 'Test diff-based instructions';
+    const mockTaskDescription = 'Test multiple changes task';
+    const mockInstructions = 'Test multiple changes instructions';
     const mockSelectedFiles = ['file1.ts'];
     const mockProcessedFiles = [
       {
         path: 'file1.ts',
-        content: 'original content',
+        content: 'original content\nmore original content',
         language: 'typescript',
         size: 100,
         created: new Date(),
@@ -222,8 +366,8 @@ describe('runAIAssistedTask', () => {
         extension: 'ts',
       },
     ];
-    const mockGeneratedPlan = 'Generated diff-based plan';
-    const mockReviewedPlan = 'Reviewed diff-based plan';
+    const mockGeneratedPlan = 'Generated multiple changes plan';
+    const mockReviewedPlan = 'Reviewed multiple changes plan';
     const mockGeneratedCode = `
       <file_list>
       file1.ts
@@ -231,45 +375,49 @@ describe('runAIAssistedTask', () => {
       <file>
       <file_path>file1.ts</file_path>
       <file_status>modified</file_status>
-      <file_content language="typescript">
-      --- file1.ts
-      +++ file1.ts
-      @@ -1 +1 @@
-      -original content
-      +updated content
+      <file_content>
+      file1.ts
+      <<<<<<< SEARCH
+      original content
+      =======
+      updated content
+      >>>>>>> REPLACE
+
+      <<<<<<< SEARCH
+      more original content
+      =======
+      additional updated content
+      >>>>>>> REPLACE
       </file_content>
       </file>
-      <git_branch_name>feature/diff-task</git_branch_name>
-      <git_commit_message>Implement diff-based task</git_commit_message>
-      <summary>Updated file using diff</summary>
+      <git_branch_name>feature/multiple-changes-task</git_branch_name>
+      <git_commit_message>Implement multiple changes task</git_commit_message>
+      <summary>Updated file with multiple changes</summary>
       <potential_issues>None</potential_issues>
     `;
 
     const mockParsedResponse = {
-      gitBranchName: 'feature/diff-task',
-      gitCommitMessage: 'Implement diff-based task',
+      gitBranchName: 'feature/multiple-changes-task',
+      gitCommitMessage: 'Implement multiple changes task',
       fileList: ['file1.ts'],
       files: [
         {
           path: 'file1.ts',
           language: 'typescript',
           status: 'modified',
-          diff: {
-            oldFileName: 'file1.ts',
-            newFileName: 'file1.ts',
-            hunks: [
-              {
-                oldStart: 1,
-                oldLines: 1,
-                newStart: 1,
-                newLines: 1,
-                lines: ['-original content', '+updated content'],
-              },
-            ],
-          },
+          changes: [
+            {
+              search: 'original content',
+              replace: 'updated content',
+            },
+            {
+              search: 'more original content',
+              replace: 'additional updated content',
+            },
+          ],
         },
       ],
-      summary: 'Updated file using diff',
+      summary: 'Updated file with multiple changes',
       potentialIssues: 'None',
     };
 
@@ -296,7 +444,7 @@ describe('runAIAssistedTask', () => {
     vi.mocked(parseAICodegenResponse).mockReturnValue(
       mockParsedResponse as unknown as AIParsedResponse,
     );
-    vi.mocked(ensureBranch).mockResolvedValue('feature/diff-task');
+    vi.mocked(ensureBranch).mockResolvedValue('feature/multiple-changes-task');
     vi.mocked(applyChanges).mockResolvedValue();
     vi.mocked(getModelConfig).mockReturnValue(mockModelConfig);
 
@@ -543,30 +691,51 @@ describe('runAIAssistedTask', () => {
     const mockGeneratedPlan = 'Generated plan';
     const mockReviewedPlan = 'Reviewed plan';
 
+    const mockProcessedFiles = [
+      {
+        path: 'file1.ts',
+        content: 'content1',
+        language: 'typescript',
+        size: 100,
+        created: new Date(),
+        modified: new Date(),
+        extension: 'ts',
+      },
+      {
+        path: 'file2.ts',
+        content: 'content2',
+        language: 'typescript',
+        size: 200,
+        created: new Date(),
+        modified: new Date(),
+        extension: 'ts',
+      },
+    ];
+
     const mockGeneratedCode = `
-    <file_list>
-    file1.ts
-    file2.ts
-    </file_list>
-    <file>
-    <file_path>file1.ts</file_path>
-    <file_content language="typescript">
-    // Updated content for file1.ts
-    </file_content>
-    <file_status>modified</file_status>
-    </file>
-    <file>
-    <file_path>file2.ts</file_path>
-    <file_content language="typescript">
-    // Updated content for file2.ts
-    </file_content>
-    <file_status>modified</file_status>
-    </file>
-    <git_branch_name>feature/test-task</git_branch_name>
-    <git_commit_message>Implement test task</git_commit_message>
-    <summary>Updated both files</summary>
-    <potential_issues>None</potential_issues>
-  `;
+      <file_list>
+      file1.ts
+      file2.ts
+      </file_list>
+      <file>
+      <file_path>file1.ts</file_path>
+      <file_content language="typescript">
+      // Updated content for file1.ts
+      </file_content>
+      <file_status>modified</file_status>
+      </file>
+      <file>
+      <file_path>file2.ts</file_path>
+      <file_content language="typescript">
+      // Updated content for file2.ts
+      </file_content>
+      <file_status>modified</file_status>
+      </file>
+      <git_branch_name>feature/test-task</git_branch_name>
+      <git_commit_message>Implement test task</git_commit_message>
+      <summary>Updated both files</summary>
+      <potential_issues>None</potential_issues>
+    `;
 
     const mockParsedResponse = {
       gitBranchName: 'feature/test-task',
@@ -593,7 +762,7 @@ describe('runAIAssistedTask', () => {
     vi.mocked(getTaskDescription).mockResolvedValue(mockTaskDescription);
     vi.mocked(getInstructions).mockResolvedValue(mockInstructions);
     vi.mocked(selectFilesPrompt).mockResolvedValue(mockSelectedFiles);
-    vi.mocked(processFiles).mockResolvedValue([]);
+    vi.mocked(processFiles).mockResolvedValue(mockProcessedFiles);
     vi.mocked(generateMarkdown).mockResolvedValue('Generated markdown');
     vi.mocked(generateAIResponse).mockResolvedValueOnce(mockGeneratedPlan);
     vi.mocked(reviewPlan).mockResolvedValue(mockReviewedPlan);
@@ -604,12 +773,6 @@ describe('runAIAssistedTask', () => {
     vi.mocked(ensureBranch).mockResolvedValue('feature/test-task');
     vi.mocked(applyChanges).mockResolvedValue();
 
-    vi.mocked(selectModelPrompt).mockResolvedValue('new-model');
-    vi.mocked(getModelConfig).mockReturnValue({
-      modelName: 'New Model',
-      // biome-ignore lint/suspicious/noExplicitAny: explicit any is fine here
-    } as any);
-
     const mockTaskCache = {
       getLastTaskData: vi.fn().mockReturnValue(null),
       setTaskData: vi.fn(),
@@ -617,13 +780,60 @@ describe('runAIAssistedTask', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     vi.mocked(TaskCache).mockImplementation(() => mockTaskCache as any);
 
-    await runAIAssistedTask(mockOptions);
+    vi.mocked(selectModelPrompt).mockResolvedValue(mockOptions.model);
+    vi.mocked(getModelConfig).mockReturnValue({
+      modelName: 'Claude 3.5 Sonnet',
+      contextWindow: 100000,
+      maxOutput: 4096,
+      pricing: { inputCost: 3, outputCost: 15 },
+      modelFamily: 'claude',
+      temperature: {
+        planningTemperature: 0.5,
+        codegenTemperature: 0.3,
+      },
+    } as ModelSpec);
 
+    // Test for plan workflow
+    await runAIAssistedTask({ ...mockOptions, plan: true });
+
+    expect(mockTaskCache.setTaskData).toHaveBeenCalledTimes(1);
     expect(mockTaskCache.setTaskData).toHaveBeenCalledWith(
       expect.stringMatching(/[\\\/]test[\\\/]path$/),
       expect.objectContaining({
         selectedFiles: mockSelectedFiles,
-        generatedPlan: mockGeneratedPlan,
+        generatedPlan: mockReviewedPlan,
+        taskDescription: mockTaskDescription,
+        instructions: mockInstructions,
+        model: mockOptions.model,
+      }),
+    );
+
+    // Reset mocks
+    vi.clearAllMocks();
+
+    // Reset mocks for no-plan workflow
+    vi.mocked(getTaskDescription).mockResolvedValue(mockTaskDescription);
+    vi.mocked(getInstructions).mockResolvedValue(mockInstructions);
+    vi.mocked(selectFilesPrompt).mockResolvedValue(mockSelectedFiles);
+    vi.mocked(processFiles).mockResolvedValue(mockProcessedFiles);
+    vi.mocked(generateMarkdown).mockResolvedValue('Generated markdown');
+    vi.mocked(generateAIResponse).mockResolvedValueOnce(mockGeneratedCode);
+    vi.mocked(parseAICodegenResponse).mockReturnValue(
+      mockParsedResponse as unknown as AIParsedResponse,
+    );
+    vi.mocked(ensureBranch).mockResolvedValue('feature/test-task');
+    vi.mocked(applyChanges).mockResolvedValue();
+    vi.mocked(selectModelPrompt).mockResolvedValue(mockOptions.model);
+
+    // Test for no-plan workflow
+    await runAIAssistedTask({ ...mockOptions, plan: false });
+
+    expect(mockTaskCache.setTaskData).toHaveBeenCalledTimes(1);
+    expect(mockTaskCache.setTaskData).toHaveBeenCalledWith(
+      expect.stringMatching(/[\\\/]test[\\\/]path$/),
+      expect.objectContaining({
+        selectedFiles: mockSelectedFiles,
+        generatedPlan: '',
         taskDescription: mockTaskDescription,
         instructions: mockInstructions,
         model: mockOptions.model,

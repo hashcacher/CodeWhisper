@@ -1,7 +1,8 @@
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'fs-extra';
-import type { TaskData } from '../types';
+import simpleGit from 'simple-git';
+import type { PullRequestInfo, TaskData } from '../types';
 
 export class TaskCache {
   private cacheFile: string;
@@ -14,6 +15,7 @@ export class TaskCache {
     this.cacheFile = path.join(cacheDir, `${projectHash}-task-cache.json`);
     this.loadCache();
   }
+
   private loadCache(): void {
     if (fs.existsSync(this.cacheFile)) {
       this.cache = fs.readJSONSync(this.cacheFile);
@@ -40,5 +42,74 @@ export class TaskCache {
 
   private getKey(basePath: string): string {
     return path.resolve(basePath);
+  }
+
+  async getRepoInfo(): Promise<{ owner: string; repo: string } | null> {
+    const git = simpleGit();
+    try {
+      const remotes = await git.getRemotes(true);
+      const originRemote = remotes.find((remote) => remote.name === 'origin');
+      if (!originRemote) {
+        return null;
+      }
+      const match = this.parseGitHubUrl(originRemote.refs.fetch);
+      if (!match) {
+        return null;
+      }
+      return match;
+    } catch (error) {
+      console.error('Error getting repository information:', error);
+      return null;
+    }
+  }
+
+  parseGitHubUrl(url: string) {
+    const sshRegex = /^git@github\.com:([^/]+)\/(.+?)(\.git)?$/;
+    const httpsRegex = /^https:\/\/github\.com\/([^/]+)\/(.+?)(\.git)?$/;
+
+    const match = url.match(sshRegex) || url.match(httpsRegex);
+
+    if (!match) {
+      return null;
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2],
+    };
+  }
+
+  async getCurrentBranch(): Promise<string> {
+    const git = simpleGit();
+    try {
+      const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
+      return branch.trim();
+    } catch (error) {
+      console.error('Error getting current branch:', error);
+      throw error;
+    }
+  }
+
+  async setPRInfo(prInfo: PullRequestInfo): Promise<void> {
+    const repoInfo = await this.getRepoInfo();
+    if (!repoInfo) {
+      throw new Error('Unable to determine repository information');
+    }
+    const { owner, repo } = repoInfo;
+    const branch = await this.getCurrentBranch();
+    const key = `${owner}/${repo}/${branch}`;
+    this.cache[key] = { ...this.cache[key], prInfo };
+    this.saveCache();
+  }
+
+  async getPRInfo(): Promise<PullRequestInfo | null> {
+    const repoInfo = await this.getRepoInfo();
+    if (!repoInfo) {
+      return null;
+    }
+    const { owner, repo } = repoInfo;
+    const branch = await this.getCurrentBranch();
+    const key = `${owner}/${repo}/${branch}`;
+    return this.cache[key]?.prInfo || null;
   }
 }

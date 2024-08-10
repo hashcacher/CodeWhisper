@@ -1,3 +1,83 @@
+## [1.14.1](https://github.com/gmickel/CodeWhisper/compare/v1.14.0...v1.14.1) (2024-08-08)
+
+
+### Bug Fixes
+
+* cleanup stdout output ([9a1f351](https://github.com/gmickel/CodeWhisper/commit/9a1f351490b2d46bd64270d709497e1628964a5b))
+* trigger release ([e5c8186](https://github.com/gmickel/CodeWhisper/commit/e5c81867ab19eeba41c557fe998e322451fafd8a))
+
+# [1.14.0](https://github.com/gmickel/CodeWhisper/compare/v1.13.6...v1.14.0) (2024-08-08)
+
+
+### Features
+
+* new diff mode ([#86](https://github.com/gmickel/CodeWhisper/issues/86)) ([b20e55b](https://github.com/gmickel/CodeWhisper/commit/b20e55b23bf0d0b2bc949d991df34c209671a676))
+* trigger release ([d646b46](https://github.com/gmickel/CodeWhisper/commit/d646b4632b82e23dd352898c052523802377cd58))
+
+## [1.13.6](https://github.com/gmickel/CodeWhisper/compare/v1.13.5...v1.13.6) (2024-08-06)
+
+
+### Bug Fixes
+
+* model check for diff mode ([d64ce8c](https://github.com/gmickel/CodeWhisper/commit/d64ce8c3b0ca89fbfac67bddf2bf66ad1bb1ddb2))
+
+## [1.13.5](https://github.com/gmickel/CodeWhisper/compare/v1.13.4...v1.13.5) (2024-08-06)
+
+
+### Bug Fixes
+
+* set diff mode to be default false ([14165ac](https://github.com/gmickel/CodeWhisper/commit/14165ac923202619c0a5d15fe8a7f3f48151fe1e))
+* test ([5800e15](https://github.com/gmickel/CodeWhisper/commit/5800e15695706f294550cd94f0f27196c967ec22))
+
+## [1.13.4](https://github.com/gmickel/CodeWhisper/compare/v1.13.3...v1.13.4) (2024-08-06)
+
+
+### Bug Fixes
+
+* revert back to our working diff method ([#82](https://github.com/gmickel/CodeWhisper/issues/82)) ([8ba856a](https://github.com/gmickel/CodeWhisper/commit/8ba856ae1472ea8cfb4aad2f3cbbd2982274648e))
+
+## [1.13.3](https://github.com/gmickel/CodeWhisper/compare/v1.13.2...v1.13.3) (2024-08-06)
+
+
+### Bug Fixes
+
+* more diff mode improvements ([#81](https://github.com/gmickel/CodeWhisper/issues/81)) ([2e3ceb3](https://github.com/gmickel/CodeWhisper/commit/2e3ceb37b8f98edc35c59f33026c1f0e6a2213b0))
+
+## [1.13.2](https://github.com/gmickel/CodeWhisper/compare/v1.13.1...v1.13.2) (2024-08-06)
+
+
+### Bug Fixes
+
+* add correct version number to cli ([#79](https://github.com/gmickel/CodeWhisper/issues/79)) ([4ff493e](https://github.com/gmickel/CodeWhisper/commit/4ff493e8a566a31be7c6517b33da843af17f8f5f))
+
+## [1.13.1](https://github.com/gmickel/CodeWhisper/compare/v1.13.0...v1.13.1) (2024-08-05)
+
+
+### Bug Fixes
+
+* cleanup task-workflow ([#78](https://github.com/gmickel/CodeWhisper/issues/78)) ([baac5ec](https://github.com/gmickel/CodeWhisper/commit/baac5ec4406205b62652cca895cae3975724933c))
+
+# [1.13.0](https://github.com/gmickel/CodeWhisper/compare/v1.12.1...v1.13.0) (2024-08-05)
+
+
+### Features
+
+* Add --no-plan mode for streamlined code generatio ([#77](https://github.com/gmickel/CodeWhisper/issues/77)) ([2fffd57](https://github.com/gmickel/CodeWhisper/commit/2fffd577af7655cea0f078bfa83b7fef9b35c8fd))
+
+## [1.12.1](https://github.com/gmickel/CodeWhisper/compare/v1.12.0...v1.12.1) (2024-08-05)
+
+
+### Bug Fixes
+
+* trigger release ([d9d4efc](https://github.com/gmickel/CodeWhisper/commit/d9d4efcdb25350fe64e7c8ec73a6a491ea5e73cb))
+
+# [1.12.0](https://github.com/gmickel/CodeWhisper/compare/v1.11.0...v1.12.0) (2024-08-05)
+
+
+### Features
+
+* Improve-docs-and-diff-mode ([#73](https://github.com/gmickel/CodeWhisper/issues/73)) ([0ff9323](https://github.com/gmickel/CodeWhisper/commit/0ff9323001d8a3144a5bfc129dafdb3f8f20f334))
+
 # [1.11.0](https://github.com/gmickel/CodeWhisper/compare/v1.10.0...v1.11.0) (2024-08-04)
 
 
