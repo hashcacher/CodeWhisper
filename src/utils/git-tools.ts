@@ -177,3 +177,9 @@ export async function commitAllChanges(
   await git.commit(commitMessage);
 }
 
+
+async function checkoutBranch(basePath: string, branchName: string): Promise<void> {
+  const git = simpleGit(basePath);
+  await git.checkout(branchName);
+}
+

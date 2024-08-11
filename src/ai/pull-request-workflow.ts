@@ -20,7 +20,7 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
-import {commitAllChanges} from '../utils/git-tools';
+import {checkoutBranch, commitAllChanges} from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
