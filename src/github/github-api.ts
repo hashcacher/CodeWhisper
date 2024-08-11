@@ -332,7 +332,7 @@ ${parsedResponse.potentialIssues}
         head: validBranchName,
         base: baseBranch,
         body,
-        issue: issueNumber,
+        issue: issueNumber.toString(),
       });
 
       return {
