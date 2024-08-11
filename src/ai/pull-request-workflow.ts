@@ -153,8 +153,8 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
 
       try {
-        const lastInteraction = await githubAPI.getLastInteraction(owner, repo, item.number);
-        if (lastInteraction === 'codewhisper-bot') {
+        const lastComment = await githubAPI.getLastComment(owner, repo, item.number);
+        if (lastComment.includes('CodeWhisper commit information:')) {
           spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
           continue;
         }

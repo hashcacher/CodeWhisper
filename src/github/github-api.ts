@@ -239,6 +239,8 @@ export class GitHubAPI {
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
     const comment = `
+CodeWhisper commit information:
+
 ## Summary
 ${parsedResponse.summary}
 
@@ -247,6 +249,11 @@ ${selectedFiles.map((file) => `- ${file}`).join('\n')}
 
 ## Potential Issues:
 ${parsedResponse.potentialIssues}
+
+You can reply with instructions such as:
+- "Revert the last commit"  
+- "Fix the typo in line 10"
+- "Add a new function to the file"
     `.trim();
     try {
       await this.octokit.issues.createComment({
@@ -368,7 +375,7 @@ ${parsedResponse.potentialIssues}
     }
   }
 
-  async getLastInteraction(owner: string, repo: string, number: number): Promise<string> {
+  async getLastComment(owner: string, repo: string, number: number): Promise<string> {
     try {
       const { data: comments } = await this.octokit.issues.listComments({
         owner,
@@ -381,7 +388,7 @@ ${parsedResponse.potentialIssues}
       }
 
       const lastComment = comments[comments.length - 1];
-      return lastComment.user?.login || '';
+      return lastComment;
     } catch (error) {
       console.error('Error fetching last interaction:', error);
       throw new Error('Failed to fetch last interaction');
