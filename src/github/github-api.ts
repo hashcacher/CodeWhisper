@@ -318,8 +318,8 @@ ${parsedResponse.potentialIssues}
     branchName: string,
     title: string,
     body: string,
+    issueNumber?: number,
     baseBranch = 'main',
-    issueNumber?: string,
   ): Promise<PullRequestInfo> {
     try {
       const validBranchName = ensureValidBranchName(branchName);

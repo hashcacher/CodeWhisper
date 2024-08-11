@@ -236,7 +236,7 @@ async function createPullRequestFromIssue(
 
     // Create the pull request
     console.log(`Creating pull request for issue #${issue.number}...`)
-    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number.toString());
+    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number);
   } catch (error) {
     console.error(`Error creating pull request for issue #${issue.number}:`, error);
     throw error;
