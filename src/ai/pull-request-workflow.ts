@@ -21,6 +21,7 @@ import {
   selectFiles,
 } from './task-workflow';
 import {checkoutBranch, commitAllChanges} from '../utils/git-tools';
+import { generateKittenAsciiArt } from '../utils/ascii-art';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -214,7 +215,8 @@ async function createPullRequestFromIssue(
 ) {
   const branchName = `codewhisper/issue-${issue.number}`;
   const prTitle = `CodeWhisper: Implement ${issue.title}`;
-  const prBody = `fix: #${issue.number}\nAutomated PR for issue #${issue.number}\n\n${issue.body}`;
+  const kittenArt = generateKittenAsciiArt();
+  const prBody = `${kittenArt}\n\nfix: #${issue.number}\nAutomated PR for issue #${issue.number}\n\n${issue.body}`;
 
   try {
     // Get the SHA of the default branch (assuming it's 'main')

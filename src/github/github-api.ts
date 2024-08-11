@@ -6,6 +6,7 @@ import type {
   PullRequestInfo,
   LabeledItem,
 } from '../types';
+import { generateKittenAsciiArt } from '../utils/ascii-art';
 import { ensureValidBranchName, ensureBranch, createBranchAndCommit, getGitHubRepoInfo, findOriginalBranch } from '../utils/git-tools';
 import simpleGit, { SimpleGit } from 'simple-git';
 
@@ -238,7 +239,10 @@ export class GitHubAPI {
     selectedFiles: string[],
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
-    const comment = `
+    const kittenArt = generateKittenAsciiArt();
+const comment = `
+${kittenArt}
+
 CodeWhisper commit information:
 
 ## Summary
@@ -251,22 +255,19 @@ ${selectedFiles.map((file) => `- ${file}`).join('\n')}
 ${parsedResponse.potentialIssues}
 
 You can reply with instructions such as:
-- "Revert the last commit"  
-- "Fix the typo in line 10"
-- "Add a new function to the file"
-    `.trim();
-    try {
-      await this.octokit.issues.createComment({
+    - "Revert the last commit"
+    - "Fix the typo in line 10"
+      - "Add a new function to the file"
+        `.trim();
+        try {
+        await this.octokit.issues.createComment({
         owner,
-        repo,
-        issue_number: prNumber,
-        body: comment,
+      repo,
+    issue_number: prNumber,
+      body: comment,
       });
     } catch (error) {
-      console.error('Error adding comment to pull request:', error);
-      throw new Error('Failed to add comment to pull request');
-    }
-  }
+  console.error('Error adding comment to pull request:', error);
 
   async checkForExistingPR(
     owner: string,
@@ -331,13 +332,16 @@ You can reply with instructions such as:
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);
 
+      const kittenArt = generateKittenAsciiArt();
+      const bodyWithKitten = `${kittenArt}\n\n${body}`;
+
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
         repo,
         title,
         head: validBranchName,
         base: baseBranch,
-        body,
+        body: bodyWithKitten,
       });
 
       return {
