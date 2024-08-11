@@ -19,7 +19,6 @@ export async function selectFilesForPROrIssue(
 ): Promise<string[]> {
   // Gather all files in the repository
   const allFiles = await getFileList(options);
-  console.log('all files', allFiles);
 
   // Generate AI response to select relevant files
   const aiResponse = await generateAIResponseForFileSelection(
@@ -27,7 +26,6 @@ export async function selectFilesForPROrIssue(
     allFiles,
     options,
   );
-  console.log('ai response', aiResponse);
 
   // Filter the list of files to only those selected by the AI
   const selectedFiles = filterFilesBasedOnAIResponse(allFiles, aiResponse);
