@@ -328,7 +328,6 @@ ${parsedResponse.potentialIssues}
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
         repo,
-        title,
         head: validBranchName,
         base: baseBranch,
         body,
