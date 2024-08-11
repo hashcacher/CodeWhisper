@@ -160,8 +160,10 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
         }
 
         if (item.pull_request) {
+          chalk.green(`Revising PR #${item.number}`);
           await revisePullRequest(owner, repo, item, options, githubAPI);
         } else {
+          chalk.green(`Creating PR from issue #${item.number}`);
           await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
         }
       } catch (itemError) {
