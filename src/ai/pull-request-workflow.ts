@@ -159,10 +159,11 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
           continue;
         }
 
+        console.log(item.pull_request)
+        return;
         if (item.pull_request) {
           await revisePullRequest(owner, repo, item, options, githubAPI);
         } else {
-          debugger;
           await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
         }
       } catch (itemError) {
