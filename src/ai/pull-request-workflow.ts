@@ -229,7 +229,9 @@ async function createPullRequestFromIssue(
     options.diff = true;
     const aiResponse = await generateAIResponseForIssue(issue, options, basePath);
     const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
-    await applyCodeModifications(options, basePath, parsedResponse);
+    await applyChanges({ basePath, parsedResponse, dryRun: false });
+    const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`
+    await commitAllChanges(basePath, commitMessage);
 
     // Create a commit with the changes
     await githubAPI.createCommitOnBranch(owner, repo, branchName, `CodeWhisper: Implement changes for issue #${issue.number}`, parsedResponse);
