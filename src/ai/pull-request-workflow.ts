@@ -227,7 +227,8 @@ async function createPullRequestFromIssue(
     const basePath = path.resolve(options.path ?? '.');
     options.respectGitignore = true;
     options.diff = true;
-    const aiResponse = await generateAIResponseForIssue(issue, options, basePath);
+    const selectedFiles = await selectFilesForPROrIssue(JSON.stringify(issue), options, basePath);
+    const aiResponse = await generateAIResponseForIssue(issue, selectedFiles, options, basePath);
     const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
     await applyChanges({ basePath, parsedResponse, dryRun: false });
     const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`
@@ -239,6 +240,7 @@ async function createPullRequestFromIssue(
     // Create the pull request
     console.log(`Creating pull request for issue #${issue.number}...`)
     const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number);
+    await githubAPI.addCommentToPR(owner, repo, prInfo.number, [], parsedResponse);
   } catch (error) {
     console.error(`Error creating pull request for issue #${issue.number}:`, error);
     throw error;
@@ -247,6 +249,7 @@ async function createPullRequestFromIssue(
 
 async function generateAIResponseForIssue(
   issue: GitHubIssue,
+  selectedFiles: string[],
   options: AiAssistedTaskOptions,
   basePath: string,
 ): Promise<string> {
@@ -258,7 +261,6 @@ async function generateAIResponseForIssue(
     var_issue: JSON.stringify(issue),
   };
 
-  const selectedFiles = await selectFilesForPROrIssue(JSON.stringify(issue), options, basePath);
   const processedFiles = await processFiles(options, selectedFiles);
 
   const issueImplementationPrompt = await generateMarkdown(
