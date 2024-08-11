@@ -3,6 +3,7 @@ import { confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
+import { getRandomKittenAsciiArt } from '../utils/ascii-art';
 import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
@@ -50,6 +51,10 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       if (issueNumber) {
         body = `Closes #${issueNumber}\n\n${body}`;
       }
+
+      // Add kitten ASCII art to the PR description
+      const kittenArt = getRandomKittenAsciiArt();
+      body = `${body}\n\n<!-- CodeWhisper Kitten -->\n\`\`\`\n${kittenArt}\n\`\`\``;
 
       spinner.start('Creating new pull request...');
       prInfo = await githubAPI.createPullRequest(

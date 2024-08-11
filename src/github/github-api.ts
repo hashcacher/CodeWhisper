@@ -6,6 +6,7 @@ import type {
   PullRequestInfo,
   LabeledItem,
 } from '../types';
+import { getRandomKittenAsciiArt } from '../utils/ascii-art';
 import { ensureValidBranchName, ensureBranch, createBranchAndCommit, getGitHubRepoInfo, findOriginalBranch } from '../utils/git-tools';
 import simpleGit, { SimpleGit } from 'simple-git';
 
@@ -331,13 +332,17 @@ You can reply with instructions such as:
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);
 
+      // Add kitten ASCII art to the PR description
+      const kittenArt = getRandomKittenAsciiArt();
+      const bodyWithKitten = `${body}\n\n<!-- CodeWhisper Kitten -->\n\`\`\`\n${kittenArt}\n\`\`\``;
+
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
         repo,
         title,
         head: validBranchName,
         base: baseBranch,
-        body,
+        body: bodyWithKitten,
       });
 
       return {
