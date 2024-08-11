@@ -239,7 +239,7 @@ async function createPullRequestFromIssue(
     await githubAPI.createCommitOnBranch(owner, repo, branchName, `CodeWhisper: Implement changes for issue #${issue.number}`, parsedResponse);
 
     // Create the pull request
-    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody);
+    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number);
   } catch (error) {
     console.error(`Error creating pull request for issue #${issue.number}:`, error);
     throw error;
