@@ -159,8 +159,6 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
           continue;
         }
 
-        console.log(item.pull_request)
-        return;
         if (item.pull_request) {
           await revisePullRequest(owner, repo, item, options, githubAPI);
         } else {
@@ -237,6 +235,7 @@ async function createPullRequestFromIssue(
     await githubAPI.createCommitOnBranch(owner, repo, branchName, `CodeWhisper: Implement changes for issue #${issue.number}`, parsedResponse);
 
     // Create the pull request
+    console.log(`Creating pull request for issue #${issue.number}...`)
     const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number.toString());
   } catch (error) {
     console.error(`Error creating pull request for issue #${issue.number}:`, error);
