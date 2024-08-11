@@ -214,7 +214,7 @@ async function createPullRequestFromIssue(
 ) {
   const branchName = `codewhisper/issue-${issue.number}`;
   const prTitle = `CodeWhisper: Implement ${issue.title}`;
-  const prBody = `Automated PR for issue #${issue.number}\n\n${issue.body}`;
+  const prBody = `fix: ${issue.number}\nAutomated PR for issue #${issue.number}\n\n${issue.body}`;
 
   try {
     // Get the SHA of the default branch (assuming it's 'main')
@@ -239,7 +239,7 @@ async function createPullRequestFromIssue(
 
     // Create the pull request
     console.log(`Creating pull request for issue #${issue.number}...`)
-    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody, issue.number);
+    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody);
     await githubAPI.addCommentToPR(owner, repo, prInfo.number, selectedFiles, parsedResponse);
   } catch (error) {
     console.error(`Error creating pull request for issue #${issue.number}:`, error);

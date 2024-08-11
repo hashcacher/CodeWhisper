@@ -325,7 +325,6 @@ You can reply with instructions such as:
     branchName: string,
     title: string,
     body: string,
-    issueNumber?: number,
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
     try {
@@ -335,10 +334,10 @@ You can reply with instructions such as:
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
         repo,
+        title,
         head: validBranchName,
         base: baseBranch,
         body,
-        issue: issueNumber,
       });
 
       return {
