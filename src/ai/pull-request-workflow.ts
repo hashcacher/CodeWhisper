@@ -14,11 +14,12 @@ import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForPROrIssue } from './select-files';
+import { applyChanges } from './apply-changes';
 import {
-  applyCodeModifications,
   handleDryRun,
   selectFiles,
 } from './task-workflow';
+import {commitAllChanges} from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -191,7 +192,9 @@ async function revisePullRequest(
   const selectedFiles = await selectFilesForPROrIssue(prDetails, options, basePath);
   const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
   const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
-  await applyCodeModifications(options, basePath, parsedResponse);
+  await applyChanges({ basePath, parsedResponse, dryRun: false });
+  const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`
+  await commitAllChanges(basePath, commitMessage);
   await githubAPI.createCommitOnPR(owner, repo, pr.number, 'CodeWhisper: Automated PR revision', parsedResponse);
   await githubAPI.addCommentToPR(owner, repo, pr.number, [], parsedResponse);
 }

@@ -167,3 +167,13 @@ export async function findDefaultBranch(
   if (branches.all.includes('master')) return 'master';
   return branches.all[0]; // This will be undefined if the array is empty
 }
+
+export async function commitAllChanges(
+  basePath: string,
+  commitMessage: string,
+) {
+  const git = simpleGit(basePath);
+  await git.add('.');
+  await git.commit(commitMessage);
+}
+

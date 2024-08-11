@@ -20,7 +20,7 @@ import {
   getCachedValue,
   setCachedValue,
 } from '../utils/cache-utils';
-import { ensureBranch } from '../utils/git-tools';
+import { ensureBranch, commitAllChanges } from '../utils/git-tools';
 import { TaskCache } from '../utils/task-cache';
 import {
   collectVariables,
@@ -555,6 +555,7 @@ export async function handleDryRun(
   console.log(chalk.blue('Potential Issues:'), parsedResponse.potentialIssues);
 }
 
+
 export async function applyCodeModifications(
   options: AiAssistedTaskOptions,
   basePath: string,
@@ -571,12 +572,10 @@ export async function applyCodeModifications(
     await applyChanges({ basePath, parsedResponse, dryRun: false });
 
     if (options.autoCommit) {
-      const git = simpleGit(basePath);
-      await git.add('.');
       const commitMessage = options.issueNumber
         ? `${parsedResponse.gitCommitMessage} (Closes #${options.issueNumber})`
         : parsedResponse.gitCommitMessage;
-      await git.commit(commitMessage);
+      commitAllChanges(basePath, commitMessage);
       spinner.succeed(
         `AI Code Modifications applied and committed to branch: ${actualBranchName}`,
       );
