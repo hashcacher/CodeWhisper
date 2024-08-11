@@ -16,6 +16,7 @@ import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForPROrIssue } from './select-files';
 import { applyChanges } from './apply-changes';
 import {
+  applyCodeModifications,
   handleDryRun,
   selectFiles,
 } from './task-workflow';
@@ -189,6 +190,15 @@ async function revisePullRequest(
 ) {
   const basePath = path.resolve(options.path ?? '.');
   const prDetails = await githubAPI.getPullRequestDetails(owner, repo, pr.number);
+
+  // Checkout the PR branch
+  try {
+    await checkoutBranch(basePath, prDetails.head.ref);
+    console.log(chalk.green(`Checked out branch: ${prDetails.head.ref}`));
+  } catch (error) {
+    console.error(chalk.red(`Failed to checkout branch: ${prDetails.head.ref}`), error);
+    throw error;
+  }
   const selectedFiles = await selectFilesForPROrIssue(prDetails, options, basePath);
   const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
   const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
