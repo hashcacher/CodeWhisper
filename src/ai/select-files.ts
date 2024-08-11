@@ -77,7 +77,6 @@ async function generateAIResponseForFileSelection(
     files: allFiles,
   });
 
-  console.log('file filter prompt', prompt);
   // TODO use a cheaper model for this
   return generateAIResponse(prompt, {
     ...options,

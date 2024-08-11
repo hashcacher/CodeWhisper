@@ -105,10 +105,6 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       await applyCodeModifications(options, basePath, parsedResponse);
     }
 
-    // Display AI suggestions
-    console.log(chalk.cyan('\nAI Suggestions:'));
-    console.log(parsedResponse.summary);
-
     // Apply changes to the pull request
     spinner.start('Applying changes to the pull request...');
     await githubAPI.applyChangesToPR(
@@ -272,8 +268,7 @@ async function generateAIResponseForIssue(
     },
   );
 
-  console.log(chalk.cyan('\nIssue Implementation Prompt:'));
-  console.log(issueImplementationPrompt);
+  console.log(chalk.cyan('Generating AI response for issue implementation:'));
   return generateAIResponse(
     issueImplementationPrompt,
     {
