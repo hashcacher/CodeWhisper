@@ -250,7 +250,8 @@ ${selectedFiles.map((file) => `- ${file}`).join('\n')}
 ## Potential Issues:
 ${parsedResponse.potentialIssues}
 
-You can reply with instructions such as:
+## Next steps:
+You can reply to CodeWhisper with instructions such as:
 - "Revert the last commit"  
 - "Fix the typo in line 10"
 - "Add a new function to the file"
