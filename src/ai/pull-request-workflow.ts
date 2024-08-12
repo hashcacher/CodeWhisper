@@ -262,7 +262,7 @@ async function revisePullRequest(
     'CodeWhisper: Automated PR revision',
     parsedResponse,
   );
-  await githubAPI.addCommentToPR(owner, repo, pr.number, [], parsedResponse);
+  await githubAPI.addCommentToPR(owner, repo, pr.number, selectedFiles, parsedResponse);
 }
 
 async function createPullRequestFromIssue(
