@@ -219,8 +219,6 @@ async function revisePullRequest(
     repo,
     pr.number,
   );
-  console.log(prDetails);
-  return;
 
   // Checkout the PR branch
   try {
