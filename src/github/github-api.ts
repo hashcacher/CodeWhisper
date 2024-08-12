@@ -437,6 +437,7 @@ You can reply to CodeWhisper with instructions such as:
       if (comments.length === 0) {
         return '';
       }
+      console.log('comments', comments)
 
       const lastComment = comments[comments.length - 1];
       return lastComment.body;
