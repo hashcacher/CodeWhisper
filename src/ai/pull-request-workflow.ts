@@ -234,6 +234,7 @@ async function revisePullRequest(
     );
     throw error;
   }
+  options.respectGitignore = true;
   const selectedFiles = await selectFilesForPROrIssue(
     prDetails,
     options,
