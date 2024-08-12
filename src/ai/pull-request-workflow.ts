@@ -440,6 +440,7 @@ async function generateAIResponseForPR(
 }
 
 async function needsRevert(prDetails: PullRequestDetails): Promise<boolean> {
+  return false;
   const lastComment = prDetails.comments[prDetails.comments.length - 1];
   const revertKeywords = ['revert', 'undo', 'rollback', 'no good', 'not good'];
   return revertKeywords.some(keyword => lastComment.body.toLowerCase().includes(keyword));
