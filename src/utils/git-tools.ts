@@ -187,5 +187,6 @@ export async function checkoutBranch(
 
 export async function revertLastCommit(basePath: string): Promise<void> {
   const git = simpleGit(basePath);
-  await git.revert('HEAD');
+  await git.revert(['HEAD']);
+  await git.push('origin', await git.revparse(['--abbrev-ref', 'HEAD']));
 }

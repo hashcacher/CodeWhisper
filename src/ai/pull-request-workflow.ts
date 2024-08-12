@@ -235,16 +235,25 @@ async function revisePullRequest(
   // Check if we need to revert the last commit
   if (await needsRevert(prDetails)) {
     console.log(chalk.yellow('Reverting last commit as requested...'));
-    await revertLastCommit(basePath);
-    await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
-    await githubAPI.addCommentToPR(
-      owner,
-      repo,
-      pr.number,
-      ['The contents of your last comment.'],
-      { summary: 'Reverted the last commit as requested.', potentialIssues: '- We only look at the last github comment.\n- We match only a small set of words to determine if a revert is requested.'}
-    );
-    console.log(chalk.green('Successfully reverted last commit.'));
+    try {
+      await revertLastCommit(basePath);
+      await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
+      await githubAPI.addCustomCommentToPR(
+        owner,
+        repo,
+        pr.number,
+        'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
+      );
+      console.log(chalk.green('Successfully reverted last commit.'));
+    } catch (error) {
+      console.error(chalk.red('Failed to revert last commit:'), error);
+      await githubAPI.addCustomCommentToPR(
+        owner,
+        repo,
+        pr.number,
+        'An error occurred while attempting to revert the last commit. Please check the repository state and try again.'
+      );
+    }
   }
 
   options.respectGitignore = true;
@@ -440,8 +449,15 @@ async function generateAIResponseForPR(
 }
 
 async function needsRevert(prDetails: PullRequestDetails): Promise<boolean> {
-  return false;
   const lastComment = prDetails.comments[prDetails.comments.length - 1];
-  const revertKeywords = ['revert', 'undo', 'rollback', 'no good', 'not good'];
-  return revertKeywords.some(keyword => lastComment.body.toLowerCase().includes(keyword));
+  const aiPrompt = `
+    Analyze the following comment and determine if the user is requesting to revert the last commit:
+    "${lastComment.body}"
+    Respond with 'true' if the user wants to revert, or 'false' otherwise.
+  `;
+  const aiResponse = await generateAIResponse(aiPrompt, {
+    maxTokens: 10,
+    temperature: 0.3,
+  });
+  return aiResponse.trim().toLowerCase() === 'true';
 }
