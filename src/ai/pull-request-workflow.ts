@@ -239,6 +239,7 @@ async function revisePullRequest(
     options,
     basePath,
   );
+  console.log('Selected files:', selectedFiles)
   const aiResponse = await generateAIResponseForPR(
     prDetails,
     options,
