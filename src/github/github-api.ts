@@ -246,7 +246,7 @@ export class GitHubAPI {
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
     const comment = `
-CodeWhisper commit information:
+CodeWhisper commit information
 
 ## Summary
 ${parsedResponse.summary}
