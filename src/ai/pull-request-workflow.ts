@@ -233,7 +233,7 @@ async function revisePullRequest(
   }
 
   // Check if we need to revert the last commit
-  if (await needsRevert(prDetails)) {
+  if (await needsRevert(prDetails, options)) {
     console.log(chalk.yellow('Reverting last commit as requested...'));
     try {
       await revertLastCommit(basePath);
@@ -448,16 +448,22 @@ async function generateAIResponseForPR(
   );
 }
 
-async function needsRevert(prDetails: PullRequestDetails): Promise<boolean> {
+  
+async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTaskOptions): Promise<boolean> {
   const lastComment = prDetails.comments[prDetails.comments.length - 1];
   const aiPrompt = `
     Analyze the following comment and determine if the user is requesting to revert the last commit:
     "${lastComment.body}"
     Respond with 'true' if the user wants to revert, or 'false' otherwise.
   `;
-  const aiResponse = await generateAIResponse(aiPrompt, {
-    maxTokens: 10,
-    temperature: 0.3,
-  });
+
+   const generateOptions = {
+      maxCostThreshold: options.maxCostThreshold,
+      model: options.model,
+      maxTokens: 10,
+      logAiInteractions: options.logAiInteractions,
+    }
+  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3,);
+    
   return aiResponse.trim().toLowerCase() === 'true';
 }
