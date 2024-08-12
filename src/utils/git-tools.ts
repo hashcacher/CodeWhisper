@@ -189,3 +189,8 @@ export async function revertLastCommit(basePath: string): Promise<void> {
   const git = simpleGit(basePath);
   await git.revert('HEAD');
 }
+
+export async function revertLastCommit(basePath: string): Promise<void> {
+  const git = simpleGit(basePath);
+  await git.revert('HEAD');
+}

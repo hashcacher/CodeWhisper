@@ -467,3 +467,22 @@ async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTas
     
   return aiResponse.trim().toLowerCase() === 'true';
 }
+
+async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTaskOptions): Promise<boolean> {
+  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  const aiPrompt = `
+    Analyze the following comment and determine if the user is requesting to revert the last commit:
+    "${lastComment.body}"
+    Respond with 'true' if the user wants to revert, or 'false' otherwise.
+  `;
+
+   const generateOptions = {
+      maxCostThreshold: options.maxCostThreshold,
+      model: options.model,
+      maxTokens: 10,
+      logAiInteractions: options.logAiInteractions,
+    }
+  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3,);
+
+  return aiResponse.trim().toLowerCase() === 'true';
+}

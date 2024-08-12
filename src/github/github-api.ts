@@ -621,4 +621,23 @@ You can reply to CodeWhisper with instructions such as:
       }
     }
   }
+
+  async addCustomCommentToPR(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    commentBody: string,
+  ): Promise<void> {
+    try {
+      await this.octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumber,
+        body: commentBody,
+      });
+    } catch (error) {
+      console.error('Error adding custom comment to pull request:', error);
+      throw new Error('Failed to add custom comment to pull request');
+    }
+  }
 }
