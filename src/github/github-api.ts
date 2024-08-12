@@ -466,10 +466,33 @@ You can reply to CodeWhisper with instructions such as:
       }
 
       const lastComment = comments[comments.length - 1];
-      return lastComment.body;
+      return lastComment.body || '';
     } catch (error) {
-      console.error('Error fetching last interaction:', error);
-      throw new Error('Failed to fetch last interaction');
+      console.error('Error fetching last comment:', error);
+      throw new Error('Failed to fetch last comment');
+    }
+  }
+
+  async getPRComments(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<PRComment[]> {
+    try {
+      const { data: comments } = await this.octokit.issues.listComments({
+        owner,
+        repo,
+        issue_number: prNumber,
+      });
+
+      return comments.map(comment => ({
+        body: comment.body || '',
+        user: comment.user?.login || 'unknown',
+        created_at: comment.created_at,
+      }));
+    } catch (error) {
+      console.error('Error fetching PR comments:', error);
+      throw new Error('Failed to fetch PR comments');
     }
   }
 
