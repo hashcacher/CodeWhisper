@@ -346,6 +346,7 @@ You can reply to CodeWhisper with instructions such as:
         head: validBranchName,
         base: baseBranch,
         body,
+        labels: ['codewhisper'],
       });
 
       return {

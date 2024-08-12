@@ -148,65 +148,63 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
-  const spinner = ora('Revising pull requests...').start();
-  try {
-    const githubAPI = new GitHubAPI();
-    const taskCache = new TaskCache(options.path || process.cwd());
+  const spinner = ora({text: 'Starting continuous PR revision process...',discardStdin: false,}).start();
 
-    // Get repository information
-    const repoInfo = await taskCache.getRepoInfo();
-    if (!repoInfo) {
-      throw new Error('Unable to determine repository information');
-    }
-    const { owner, repo } = repoInfo;
+  async function revisionLoop() {
+    try {
+      const githubAPI = new GitHubAPI();
+      const taskCache = new TaskCache(options.path || process.cwd());
 
-    // Get CodeWhisper labeled items
-    const labeledItems = await githubAPI.getCodeWhisperLabeledItems(
-      owner,
-      repo,
-    );
-
-    for (const item of labeledItems) {
-      spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
-
-      try {
-        const lastComment = await githubAPI.getLastComment(
-          owner,
-          repo,
-          item.number,
-        );
-        if (lastComment.includes('CodeWhisper commit information')) {
-          spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
-          continue;
-        }
-
-        if (item.pull_request) {
-          console.log(`Revising PR #${item.number}`);
-          await revisePullRequest(owner, repo, item, options, githubAPI);
-        } else {
-          console.log(`Creating PR from issue #${item.number}`);
-          await createPullRequestFromIssue(
-            owner,
-            repo,
-            item,
-            options,
-            githubAPI,
-          );
-        }
-      } catch (itemError) {
-        console.error(
-          `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
-          itemError,
-        );
-        // Continue with the next item
+      // Get repository information
+      const repoInfo = await taskCache.getRepoInfo();
+      if (!repoInfo) {
+        throw new Error('Unable to determine repository information');
       }
+      const { owner, repo } = repoInfo;
+
+      spinner.text = 'Fetching CodeWhisper labeled items...';
+      const labeledItems = await githubAPI.getCodeWhisperLabeledItems(owner, repo);
+
+      for (const item of labeledItems) {
+        spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
+
+        try {
+          const lastComment = await githubAPI.getLastComment(owner, repo, item.number);
+          if (lastComment.includes('CodeWhisper commit information:')) {
+            spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
+            continue;
+          }
+
+          if (item.pull_request) {
+            console.log(`Revising PR #${item.number}`);
+            await revisePullRequest(owner, repo, item, options, githubAPI);
+          } else {
+            console.log(`Creating PR from issue #${item.number}`);
+            await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
+          }
+        } catch (itemError) {
+          console.error(
+            `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
+            itemError,
+          );
+          // Continue with the next item
+        }
+      }
+
+      spinner.succeed('Iteration completed. Waiting before next iteration...');
+    } catch (error) {
+      spinner.fail('Error in pull request revision iteration');
+      console.error(chalk.red('Error:'), error);
     }
 
-    spinner.succeed('Pull request revision completed');
-  } catch (error) {
-    spinner.fail('Error in pull request revision');
-    console.error(chalk.red('Error:'), error);
+    // Wait for 1 minute before the next iteration
+    await new Promise(resolve => setTimeout(resolve, 1 * 60 * 1000));
+    spinner.start('Starting next iteration...');
+    await revisionLoop();
   }
+
+  // Start the continuous revision loop
+  await revisionLoop();
 }
 
 async function revisePullRequest(
