@@ -251,13 +251,13 @@ CodeWhisper commit information:
 ## Summary
 ${parsedResponse.summary}
 
-## Files we looked at:
+## Files we looked at
 ${selectedFiles.map((file) => `- ${file}`).join('\n')}
 
-## Potential Issues:
+## Potential Issues
 ${parsedResponse.potentialIssues}
 
-## Next steps:
+## Next steps
 You can reply to CodeWhisper with instructions such as:
 - "Revert the last commit"  
 - "Fix the typo in line 10"
