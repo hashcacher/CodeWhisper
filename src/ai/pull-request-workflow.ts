@@ -178,10 +178,10 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
           if (item.pull_request) {
             console.log(`Revising PR #${item.number}`);
-            // await revisePullRequest(owner, repo, item, options, githubAPI);
+            await revisePullRequest(owner, repo, item, options, githubAPI);
           } else {
             console.log(`Creating PR from issue #${item.number}`);
-            // await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
+            await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
           }
         } catch (itemError) {
           console.error(

@@ -346,6 +346,7 @@ You can reply to CodeWhisper with instructions such as:
         head: validBranchName,
         base: baseBranch,
         body,
+        labels: ['codewhisper'],
       });
 
       return {
@@ -381,7 +382,6 @@ You can reply to CodeWhisper with instructions such as:
             issue.pull_request !== undefined && issue?.body?.includes('fix:'),
         )
         .map((issue) => issue?.body?.match(/fix: #(\d+)/)?.[1]);
-      console.log('Fixed issues:', fixedIssues);
 
       return issues
         .filter((issue) => !fixedIssues.includes(issue.number.toString()))
