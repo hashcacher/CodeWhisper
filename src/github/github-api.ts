@@ -199,6 +199,7 @@ export class GitHubAPI {
       return {
         title: pr.title,
         body: pr.body || '',
+        head: pr.head,
         comments: comments.map((comment) => ({
           user: comment.user?.login || 'unknown',
           body: comment.body || '',
