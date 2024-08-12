@@ -346,6 +346,13 @@ You can reply to CodeWhisper with instructions such as:
         head: validBranchName,
         base: baseBranch,
         body,
+      });
+      
+      // Add the CodeWhisper label to the PR
+      await this.octokit.issues.addLabels({
+        owner,
+        repo,
+        issue_number: pullRequest.number,
         labels: ['codewhisper'],
       });
 
