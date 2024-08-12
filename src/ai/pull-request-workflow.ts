@@ -241,8 +241,8 @@ async function revisePullRequest(
       owner,
       repo,
       pr.number,
-      [],
-      { summary: 'Reverted the last commit as requested.' }
+      ['The contents of your last comment.'],
+      { summary: 'Reverted the last commit as requested.', potentialIssues: '- We only look at the last github comment.\n- We match only a small set of words to determine if a revert is requested.'}
     );
     console.log(chalk.green('Successfully reverted last commit.'));
   }
