@@ -196,6 +196,8 @@ async function revisePullRequest(
     console.error(chalk.red(`Failed to checkout branch: ${prDetails.head.ref}`), error);
     throw error;
   }
+  options.respectGitignore = true;
+  options.autoCommit= true
   const selectedFiles = await selectFilesForPROrIssue(prDetails, options, basePath);
   const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
   const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
