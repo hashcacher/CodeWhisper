@@ -25,7 +25,7 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
-import { checkoutBranch, commitAllChanges } from '../utils/git-tools';
+import { checkoutBranch, commitAllChanges, revertLastCommit } from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -231,6 +231,23 @@ async function revisePullRequest(
     );
     throw error;
   }
+
+  // Check if we need to revert the last commit
+  if (await needsRevert(prDetails)) {
+    console.log(chalk.yellow('Reverting last commit as requested...'));
+    await revertLastCommit(basePath);
+    await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
+    await githubAPI.addCommentToPR(
+      owner,
+      repo,
+      pr.number,
+      [],
+      { explanation: 'Reverted the last commit as requested.' }
+    );
+    console.log(chalk.green('Successfully reverted last commit.'));
+    return;
+  }
+
   options.respectGitignore = true;
   const selectedFiles = await selectFilesForPROrIssue(
     JSON.stringify(prDetails),
