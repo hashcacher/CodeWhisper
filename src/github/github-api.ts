@@ -29,6 +29,30 @@ export class GitHubAPI {
     this.octokit = new Octokit({ auth: token });
   }
 
+  async getLastComment(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<string> {
+    try {
+      const { data: comments } = await this.octokit.issues.listComments({
+        owner,
+        repo,
+        issue_number: number,
+      });
+
+      if (comments.length === 0) {
+        return '';
+      }
+
+      const lastComment = comments[comments.length - 1];
+      return lastComment.body || '';
+    } catch (error) {
+      console.error('Error fetching last comment:', error);
+      throw new Error('Failed to fetch last comment');
+    }
+  }
+
   async getRepositoryIssues(
     owner: string,
     repo: string,

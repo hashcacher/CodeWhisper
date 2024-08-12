@@ -190,3 +190,17 @@ export async function checkoutBranch(
   const git = simpleGit(basePath);
   await git.checkout(branchName);
 }
+
+export async function revertCommit(basePath: string): Promise<string> {
+  const git = simpleGit(basePath);
+  const result = await git.revert(['HEAD']);
+  return result.summary.changes;
+}
+
+export async function checkoutBranch(
+  basePath: string,
+  branchName: string,
+): Promise<void> {
+  const git = simpleGit(basePath);
+  await git.checkout(branchName);
+}
