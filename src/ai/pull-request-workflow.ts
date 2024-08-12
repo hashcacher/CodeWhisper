@@ -197,7 +197,7 @@ async function revisePullRequest(
     throw error;
   }
   options.respectGitignore = true;
-  options.autoCommit= true
+  options.autoCommit = true;
   const selectedFiles = await selectFilesForPROrIssue(prDetails, options, basePath);
   const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
   const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);

@@ -240,7 +240,7 @@ export class GitHubAPI {
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
     const kittenArt = generateKittenAsciiArt();
-const comment = `
+    const comment = `
 ${kittenArt}
 
 CodeWhisper commit information:
@@ -259,15 +259,17 @@ You can reply with instructions such as:
     - "Fix the typo in line 10"
       - "Add a new function to the file"
         `.trim();
-        try {
-        await this.octokit.issues.createComment({
+    try {
+      await this.octokit.issues.createComment({
         owner,
-      repo,
-    issue_number: prNumber,
-      body: comment,
+        repo,
+        issue_number: prNumber,
+        body: comment,
       });
     } catch (error) {
-  console.error('Error adding comment to pull request:', error);
+      console.error('Error adding comment to pull request:', error);
+    }
+  }
 
   async checkForExistingPR(
     owner: string,
