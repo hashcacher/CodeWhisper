@@ -191,7 +191,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
         }
       }
 
-      spinner.succeed('Iteration completed. Waiting before next iteration...');
+      spinner.succeed('Iteration completed. Waiting a minute before next iteration...');
     } catch (error) {
       spinner.fail('Error in pull request revision iteration');
       console.error(chalk.red('Error:'), error);
