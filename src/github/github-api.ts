@@ -434,11 +434,25 @@ You can reply to CodeWhisper with instructions such as:
         issue_number: number,
       });
 
-      if (comments.length === 0) {
+      const { data: reviewComments } =
+        await this.octokit.pulls.listReviewComments({
+          owner,
+          repo,
+          pull_number: number,
+        });
+
+      if (comments.length === 0 && reviewComments.length === 0) {
         return '';
       }
       console.log('comments', comments)
 
+      // Get the last comment between comments and reviewComments
+      comments.push(...reviewComments);
+      comments.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateA - dateB;
+      });
       const lastComment = comments[comments.length - 1];
       return lastComment.body;
     } catch (error) {
