@@ -361,14 +361,22 @@ You can reply to CodeWhisper with instructions such as:
         state: 'open',
       });
 
-      return issues.map(item => ({
-        number: item.number,
-        title: item.title,
-        body: item.body || '',
-        html_url: item.html_url,
-        updated_at: item.updated_at,
-        pull_request: item.pull_request ? { url: item.pull_request.url } : undefined,
-      }));
+      // Filter out issues for which we have started PRs
+      const fixedIssues = issues
+        .filter((issue) => issue.pull_request !== undefined && issue?.body?.includes('fix:'))
+        .map((issue) => issue?.body?.match(/fix: #(\d+)/)?.[1]);
+
+      return issues
+        .filter((issue) => !fixedIssues.includes(issue.number.toString()))
+        .map(item => ({
+          number: item.number,
+          title: item.title,
+          body: item.body || '',
+          html_url: item.html_url,
+          updated_at: item.updated_at,
+          pull_request: item.pull_request ? { url: item.pull_request.url } : undefined,
+        }
+      ));
     } catch (error) {
       console.error('Error fetching CodeWhisper labeled items:', error);
       throw new Error('Failed to fetch CodeWhisper labeled items');
@@ -388,7 +396,7 @@ You can reply to CodeWhisper with instructions such as:
       }
 
       const lastComment = comments[comments.length - 1];
-      return lastComment;
+      return lastComment.body;
     } catch (error) {
       console.error('Error fetching last interaction:', error);
       throw new Error('Failed to fetch last interaction');
