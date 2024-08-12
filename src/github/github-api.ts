@@ -259,22 +259,22 @@ ${parsedResponse.potentialIssues}
 
 ## Next steps
 You can reply to CodeWhisper with instructions such as:
-- "Revert the last commit"
+- "Revert the last commit"  
 - "Fix the typo in line 10"
 - "Add a new function to the file"
     `.trim();
-    await this.addCustomCommentToPR(owner, repo, prNumber, comment);
-      }
-        
-        async addCustomCommentToPR(
-        owner: string,
-        repo: string,
-      prNumber: number,
-    comment: string,
-      ): Promise<void> {
-      try {
-    await this.octokit.issues.createComment({
-  owner,
+    try {
+      await this.octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumber,
+        body: comment,
+      });
+    } catch (error) {
+      console.error('Error adding comment to pull request:', error);
+      throw new Error('Failed to add comment to pull request');
+    }
+  }
 
   async checkForExistingPR(
     owner: string,
