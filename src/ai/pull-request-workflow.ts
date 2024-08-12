@@ -159,11 +159,15 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
           continue;
         }
 
+    spinner.succeed('Pull request revision completed');
+        console.log(`${JSON.stringify(item)}`)
         if (item.pull_request) {
-          chalk.green(`Revising PR #${item.number}`);
+          console.log(`Revising PR #${item.number}`);
+          continue;
           await revisePullRequest(owner, repo, item, options, githubAPI);
         } else {
-          chalk.green(`Creating PR from issue #${item.number}`);
+          console.log(`Creating PR from issue #${item.number}`);
+          continue;
           await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
         }
       } catch (itemError) {
