@@ -71,7 +71,7 @@ async function generateAIResponseForFileSelection(
   });
 
   const prompt = template({
-    pullRequestDetails: JSON.stringify(prDetails),
+    pullRequestDetails: prDetails,
     files: allFiles,
   });
 

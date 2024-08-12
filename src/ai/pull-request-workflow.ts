@@ -81,14 +81,13 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       repo,
       prInfo.number,
     );
-    console.log(prDetails);
     if (!needsAction(prDetails)) {
       return;
     }
 
     // Select relevant files using AI
     const selectedFiles = await selectFilesForPROrIssue(
-      prDetails,
+      JSON.stringify(prDetails),
       options,
       basePath,
     );
