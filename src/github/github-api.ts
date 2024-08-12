@@ -496,64 +496,6 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async getPRComments(
-    owner: string,
-    repo: string,
-    prNumber: number,
-  ): Promise<PRComment[]> {
-    try {
-      const { data: comments } = await this.octokit.issues.listComments({
-        owner,
-        repo,
-        issue_number: prNumber,
-      });
-
-      return comments.map(comment => ({
-        body: comment.body || '',
-        user: comment.user?.login || 'unknown',
-        created_at: comment.created_at,
-      }));
-    } catch (error) {
-      console.error('Error fetching PR comments:', error);
-      throw new Error('Failed to fetch PR comments');
-    }
-  }
-
-  async pushCommitToPR(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    commitMessage: string,
-  ): Promise<void> {
-    try {
-      const { data: pr } = await this.octokit.pulls.get({
-        owner,
-        repo,
-        pull_number: prNumber,
-      });
-
-      await this.octokit.git.createRef({
-        owner,
-        repo,
-        ref: `refs/heads/${pr.head.ref}`,
-        sha: pr.head.sha,
-      });
-
-      await this.octokit.git.createCommit({
-        owner,
-        repo,
-        message: commitMessage,
-        tree: pr.head.sha,
-        parents: [pr.head.sha],
-      });
-
-      console.log(`Successfully pushed commit to PR #${prNumber}`);
-    } catch (error) {
-      console.error('Error pushing commit to PR:', error);
-      throw new Error('Failed to push commit to PR');
-    }
-  }
-
   async createCommitOnPR(
     owner: string,
     repo: string,

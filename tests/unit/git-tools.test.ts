@@ -259,4 +259,23 @@ describe('Git utility functions', () => {
       );
     });
   });
+
+  describe('revertCommit', () => {
+    it('should revert the last commit', async () => {
+      mockGit.revert.mockResolvedValue({ summary: { changes: 'Reverted changes' } });
+
+      const result = await revertCommit(mockBasePath);
+
+      expect(result).toBe('Reverted changes');
+      expect(mockGit.revert).toHaveBeenCalledWith(['HEAD']);
+    });
+  });
+
+  describe('checkoutBranch', () => {
+    it('should checkout the specified branch', async () => {
+      await checkoutBranch(mockBasePath, 'feature-branch');
+
+      expect(mockGit.checkout).toHaveBeenCalledWith('feature-branch');
+    });
+  });
 });
