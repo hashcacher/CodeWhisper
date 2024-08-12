@@ -148,7 +148,6 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
-	
   const spinner = ora({text: 'Starting continuous PR revision process...',discardStdin: false,}).start();
 
   async function revisionLoop() {
