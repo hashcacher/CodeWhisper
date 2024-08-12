@@ -150,62 +150,86 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
   const spinner = ora('Revising pull requests...').start();
   try {
-    const githubAPI = new GitHubAPI();
-    const taskCache = new TaskCache(options.path || process.cwd());
-
-    // Get repository information
-    const repoInfo = await taskCache.getRepoInfo();
-    if (!repoInfo) {
-      throw new Error('Unable to determine repository information');
-    }
-    const { owner, repo } = repoInfo;
-
-    // Get CodeWhisper labeled items
-    const labeledItems = await githubAPI.getCodeWhisperLabeledItems(
-      owner,
-      repo,
-    );
-
-    for (const item of labeledItems) {
-      spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
-
-      try {
-        const lastComment = await githubAPI.getLastComment(
-          owner,
-          repo,
-          item.number,
-        );
-        if (lastComment.includes('CodeWhisper commit information:')) {
-          spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
-          continue;
-        }
-
-        if (item.pull_request) {
-          console.log(`Revising PR #${item.number}`);
-          await revisePullRequest(owner, repo, item, options, githubAPI);
-        } else {
-          console.log(`Creating PR from issue #${item.number}`);
-          await createPullRequestFromIssue(
-            owner,
-            repo,
-            item,
-            options,
-            githubAPI,
-          );
-        }
-      } catch (itemError) {
-        console.error(
-          `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
-          itemError,
-        );
-        // Continue with the next item
-      }
-    }
-
+    await processPullRequestsAndIssues(options, spinner);
     spinner.succeed('Pull request revision completed');
   } catch (error) {
     spinner.fail('Error in pull request revision');
     console.error(chalk.red('Error:'), error);
+  }
+}
+
+export async function continuouslyRevisePullRequests(options: AiAssistedTaskOptions) {
+  console.log(chalk.cyan('Starting continuous pull request revision...'));
+
+  async function runRevision() {
+    const spinner = ora('Revising pull requests...').start();
+    try {
+      await processPullRequestsAndIssues(options, spinner);
+      spinner.succeed('Pull request revision completed');
+    } catch (error) {
+      spinner.fail('Error in pull request revision');
+      console.error(chalk.red('Error:'), error);
+    }
+
+    // Schedule the next run after 5 minutes
+    setTimeout(runRevision, 5 * 60 * 1000);
+  }
+
+  // Start the continuous revision process
+  runRevision();
+}
+
+async function processPullRequestsAndIssues(options: AiAssistedTaskOptions, spinner: ora.Ora) {
+  const githubAPI = new GitHubAPI();
+  const taskCache = new TaskCache(options.path || process.cwd());
+
+  // Get repository information
+  const repoInfo = await taskCache.getRepoInfo();
+  if (!repoInfo) {
+    throw new Error('Unable to determine repository information');
+  }
+  const { owner, repo } = repoInfo;
+
+  // Get CodeWhisper labeled items
+  const labeledItems = await githubAPI.getCodeWhisperLabeledItems(
+    owner,
+    repo,
+  );
+
+  for (const item of labeledItems) {
+    spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
+
+    try {
+      const lastComment = await githubAPI.getLastComment(
+        owner,
+        repo,
+        item.number,
+      );
+      if (lastComment.includes('CodeWhisper commit information:')) {
+        spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
+        continue;
+      }
+
+      if (item.pull_request) {
+        console.log(`Revising PR #${item.number}`);
+        await revisePullRequest(owner, repo, item, options, githubAPI);
+      } else {
+        console.log(`Creating PR from issue #${item.number}`);
+        await createPullRequestFromIssue(
+          owner,
+          repo,
+          item,
+          options,
+          githubAPI,
+        );
+      }
+    } catch (itemError) {
+      console.error(
+        `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
+        itemError,
+      );
+      // Continue with the next item
+    }
   }
 }
 
@@ -240,7 +264,6 @@ async function revisePullRequest(
     options,
     basePath,
   );
-  console.log('Selected files:', selectedFiles)
   const aiResponse = await generateAIResponseForPR(
     prDetails,
     options,
