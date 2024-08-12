@@ -197,8 +197,8 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       console.error(chalk.red('Error:'), error);
     }
 
-    // Wait for 5 minutes before the next iteration
-    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+    // Wait for 1 minute before the next iteration
+    await new Promise(resolve => setTimeout(resolve, 1 * 60 * 1000));
     spinner.start('Starting next iteration...');
     await revisionLoop();
   }
