@@ -233,7 +233,7 @@ async function revisePullRequest(
   }
   options.respectGitignore = true;
   const selectedFiles = await selectFilesForPROrIssue(
-    prDetails,
+    JSON.stringify(prDetails),
     options,
     basePath,
   );
