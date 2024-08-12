@@ -197,7 +197,7 @@ export class GitHubAPI {
         });
 
       // Filter only comments that happened since the last AI generated revision
-      const lastAIRevision = comments.find((comment) =>
+      const lastAIRevision = comments.findLast((comment) =>
         comment?.body?.includes('CodeWhisper commit information'),
       );
       const lastAIRevisionDate = new Date(lastAIRevision?.created_at || pr.created_at);
