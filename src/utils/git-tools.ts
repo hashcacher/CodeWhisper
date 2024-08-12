@@ -177,6 +177,12 @@ export async function commitAllChanges(
   await git.commit(commitMessage);
 }
 
+export async function revertCommit(basePath: string): Promise<string> {
+  const git = simpleGit(basePath);
+  const result = await git.revert(['HEAD']);
+  return result.summary.changes;
+}
+
 export async function checkoutBranch(
   basePath: string,
   branchName: string,

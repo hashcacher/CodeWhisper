@@ -25,7 +25,7 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
-import { checkoutBranch, commitAllChanges } from '../utils/git-tools';
+import { checkoutBranch, commitAllChanges, revertCommit } from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -177,7 +177,12 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
           if (item.pull_request) {
             console.log(`Revising PR #${item.number}`);
-            await revisePullRequest(owner, repo, item, options, githubAPI);
+            const shouldRevert = await checkForRevertRequest(owner, repo, item.number, githubAPI);
+            if (shouldRevert) {
+              await revertLastCommit(owner, repo, item.number, options, githubAPI);
+            } else {
+              await revisePullRequest(owner, repo, item, options, githubAPI);
+            }
           } else {
             console.log(`Creating PR from issue #${item.number}`);
             await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
