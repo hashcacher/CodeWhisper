@@ -242,10 +242,9 @@ async function revisePullRequest(
       repo,
       pr.number,
       [],
-      { explanation: 'Reverted the last commit as requested.' }
+      { summary: 'Reverted the last commit as requested.' }
     );
     console.log(chalk.green('Successfully reverted last commit.'));
-    return;
   }
 
   options.respectGitignore = true;
@@ -438,4 +437,10 @@ async function generateAIResponseForPR(
     },
     modelConfig.temperature?.planningTemperature,
   );
+}
+
+async function needsRevert(prDetails: PullRequestDetails): Promise<boolean> {
+  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  const revertKeywords = ['revert', 'undo', 'rollback', 'no good', 'not good'];
+  return revertKeywords.some(keyword => lastComment.body.toLowerCase().includes(keyword));
 }
