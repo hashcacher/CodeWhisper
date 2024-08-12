@@ -193,7 +193,7 @@ export async function processFiles(
 ): Promise<FileInfo[]> {
   const basePath = path.resolve(options.path ?? '.');
   const fileCache = new FileCache(options.cachePath ?? DEFAULT_CACHE_PATH);
-  const paths = filePaths ?? await getFilePaths(options);
+  const paths = filePaths ?? (await getFilePaths(options));
 
   const fileInfos: FileInfo[] = [];
   const cachePromises: Promise<void>[] = [];

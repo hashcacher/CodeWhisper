@@ -6,7 +6,13 @@ import type {
   PullRequestInfo,
   LabeledItem,
 } from '../types';
-import { ensureValidBranchName, ensureBranch, createBranchAndCommit, getGitHubRepoInfo, findOriginalBranch } from '../utils/git-tools';
+import {
+  ensureValidBranchName,
+  ensureBranch,
+  createBranchAndCommit,
+  getGitHubRepoInfo,
+  findOriginalBranch,
+} from '../utils/git-tools';
 import simpleGit, { SimpleGit } from 'simple-git';
 
 export class GitHubAPI {
@@ -352,38 +358,52 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async getCodeWhisperLabeledItems(owner: string, repo: string): Promise<LabeledItem[]> {
+  async getCodeWhisperLabeledItems(
+    owner: string,
+    repo: string,
+  ): Promise<LabeledItem[]> {
     try {
-      const issues = await this.octokit.paginate(this.octokit.issues.listForRepo, {
-        owner,
-        repo,
-        labels: 'codewhisper',
-        state: 'open',
-      });
+      const issues = await this.octokit.paginate(
+        this.octokit.issues.listForRepo,
+        {
+          owner,
+          repo,
+          labels: 'codewhisper',
+          state: 'open',
+        },
+      );
 
       // Filter out issues for which we have started PRs
       const fixedIssues = issues
-        .filter((issue) => issue.pull_request !== undefined && issue?.body?.includes('fix:'))
+        .filter(
+          (issue) =>
+            issue.pull_request !== undefined && issue?.body?.includes('fix:'),
+        )
         .map((issue) => issue?.body?.match(/fix: #(\d+)/)?.[1]);
 
       return issues
         .filter((issue) => !fixedIssues.includes(issue.number.toString()))
-        .map(item => ({
+        .map((item) => ({
           number: item.number,
           title: item.title,
           body: item.body || '',
           html_url: item.html_url,
           updated_at: item.updated_at,
-          pull_request: item.pull_request ? { url: item.pull_request.url } : undefined,
-        }
-      ));
+          pull_request: item.pull_request
+            ? { url: item.pull_request.url }
+            : undefined,
+        }));
     } catch (error) {
       console.error('Error fetching CodeWhisper labeled items:', error);
       throw new Error('Failed to fetch CodeWhisper labeled items');
     }
   }
 
-  async getLastComment(owner: string, repo: string, number: number): Promise<string> {
+  async getLastComment(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<string> {
     try {
       const { data: comments } = await this.octokit.issues.listComments({
         owner,
@@ -403,7 +423,13 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async createCommitOnPR(owner: string, repo: string, prNumber: number, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+  async createCommitOnPR(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    commitMessage: string,
+    changes: AIParsedResponse,
+  ): Promise<void> {
     try {
       // Get the PR details
       const { data: pr } = await this.octokit.pulls.get({
@@ -412,7 +438,13 @@ You can reply to CodeWhisper with instructions such as:
         pull_number: prNumber,
       });
 
-      await this.createCommitOnBranch(owner, repo, pr.head.ref, commitMessage, changes);
+      await this.createCommitOnBranch(
+        owner,
+        repo,
+        pr.head.ref,
+        commitMessage,
+        changes,
+      );
 
       console.log(`Successfully created commit on PR #${prNumber}`);
     } catch (error) {
@@ -425,7 +457,13 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async createCommitOnBranch(owner: string, repo: string, branchName: string, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+  async createCommitOnBranch(
+    owner: string,
+    repo: string,
+    branchName: string,
+    commitMessage: string,
+    changes: AIParsedResponse,
+  ): Promise<void> {
     try {
       const repoInfo = await getGitHubRepoInfo('.');
       if (!repoInfo) {
@@ -474,7 +512,12 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async createBranch(owner: string, repo: string, branchName: string, baseBranch: string): Promise<void> {
+  async createBranch(
+    owner: string,
+    repo: string,
+    branchName: string,
+    baseBranch: string,
+  ): Promise<void> {
     try {
       const git: SimpleGit = simpleGit('.');
 
@@ -491,7 +534,9 @@ You can reply to CodeWhisper with instructions such as:
       // Push the new branch to the remote
       await git.push('origin', branchName);
 
-      console.log(`Successfully created and pushed branch ${branchName} based on ${baseBranch}`);
+      console.log(
+        `Successfully created and pushed branch ${branchName} based on ${baseBranch}`,
+      );
     } catch (error) {
       console.error('Error creating/updating branch:', error);
       if (error instanceof Error) {
@@ -502,7 +547,13 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async createCommitOnPR(owner: string, repo: string, prNumber: number, commitMessage: string, changes: AIParsedResponse): Promise<void> {
+  async createCommitOnPR(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    commitMessage: string,
+    changes: AIParsedResponse,
+  ): Promise<void> {
     try {
       const { data: pr } = await this.octokit.pulls.get({
         owner,
@@ -510,7 +561,13 @@ You can reply to CodeWhisper with instructions such as:
         pull_number: prNumber,
       });
 
-      await this.createCommitOnBranch(owner, repo, pr.head.ref, commitMessage, changes);
+      await this.createCommitOnBranch(
+        owner,
+        repo,
+        pr.head.ref,
+        commitMessage,
+        changes,
+      );
 
       console.log(`Successfully created commit on PR #${prNumber}`);
     } catch (error) {

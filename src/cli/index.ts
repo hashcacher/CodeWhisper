@@ -7,7 +7,10 @@ import fs from 'fs-extra';
 import ora from 'ora';
 import { applyTask } from '../ai/apply-task';
 import { getModelConfig, getModelNames } from '../ai/model-config';
-import { runPullRequestWorkflow, revisePullRequests } from '../ai/pull-request-workflow';
+import {
+  runPullRequestWorkflow,
+  revisePullRequests,
+} from '../ai/pull-request-workflow';
 import { redoLastTask } from '../ai/redo-task';
 import { runAIAssistedTask } from '../ai/task-workflow';
 import { undoTaskChanges } from '../ai/undo-task-changes';
@@ -224,11 +227,21 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
 
   program
     .command('revise-prs')
-    .description('Continuously revise pull requests with the "codewhisper" label')
+    .description(
+      'Continuously revise pull requests with the "codewhisper" label',
+    )
     .option('-p, --path <path>', 'Path to the codebase', '.')
     .option('-m, --model <modelId>', 'Specify the AI model to use')
-    .option('--log-ai-interactions', 'Enable logging of AI prompts, responses, and parsing results', false)
-    .option('-max --max-cost-threshold <number>', 'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)', Number.parseFloat)
+    .option(
+      '--log-ai-interactions',
+      'Enable logging of AI prompts, responses, and parsing results',
+      false,
+    )
+    .option(
+      '-max --max-cost-threshold <number>',
+      'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
+      Number.parseFloat,
+    )
     .action(async (options) => {
       try {
         await revisePullRequests(options);
@@ -380,61 +393,60 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       false,
     )
     .action(async (options) => {
-    const spinner = ora('Processing files...').start();
+      const spinner = ora('Processing files...').start();
 
-    try {
-      let templatePath: string;
-      if (options.customTemplate) {
-        templatePath = path.resolve(options.customTemplate);
-      } else {
-        templatePath = getTemplatePath(options.template);
-      }
+      try {
+        let templatePath: string;
+        if (options.customTemplate) {
+          templatePath = path.resolve(options.customTemplate);
+        } else {
+          templatePath = getTemplatePath(options.template);
+        }
 
-      if (!fs.existsSync(templatePath)) {
-        console.error(`Template file not found: ${templatePath}`);
-        process.exit(1);
-      }
+        if (!fs.existsSync(templatePath)) {
+          console.error(`Template file not found: ${templatePath}`);
+          process.exit(1);
+        }
 
-      const templateContent = await fs.readFile(templatePath, 'utf-8');
-      const variables = extractTemplateVariables(templateContent);
+        const templateContent = await fs.readFile(templatePath, 'utf-8');
+        const variables = extractTemplateVariables(templateContent);
 
-      const customData = await collectVariables(
+        const customData = await collectVariables(
           options.customData,
           options.cachePath,
           variables,
           templatePath,
         );
 
-      const files = await processFiles(options);
+        const files = await processFiles(options);
 
-      spinner.text = 'Generating markdown...';
+        spinner.text = 'Generating markdown...';
 
-      let markdown = await generateMarkdown(files, templateContent, {
+        let markdown = await generateMarkdown(files, templateContent, {
           noCodeblock: !options.codeblock,
           basePath: options.path,
           customData,
           lineNumbers: options.lineNumbers,
         });
 
-      if (options.prompt) {
-        markdown += `\n\n## Your Task\n\n${options.prompt}`;
-      }
+        if (options.prompt) {
+          markdown += `\n\n## Your Task\n\n${options.prompt}`;
+        }
 
-      spinner.succeed('Markdown generated successfully');
+        spinner.succeed('Markdown generated successfully');
 
-      await handleEditorAndOutput({
+        await handleEditorAndOutput({
           content: markdown,
           outputPath: options.output || 'stdout',
           openEditor: options.openEditor,
           spinner,
         });
-    } catch (error) {
-      spinner.fail('Error generating output');
-      console.error(chalk.red((error as Error).message));
-      process.exit(1);
-    }
-  }
-  )
+      } catch (error) {
+        spinner.fail('Error generating output');
+        console.error(chalk.red((error as Error).message));
+        process.exit(1);
+      }
+    });
 
   program
     .command('clear-cache')

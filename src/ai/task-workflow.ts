@@ -555,7 +555,6 @@ export async function handleDryRun(
   console.log(chalk.blue('Potential Issues:'), parsedResponse.potentialIssues);
 }
 
-
 export async function applyCodeModifications(
   options: AiAssistedTaskOptions,
   basePath: string,
