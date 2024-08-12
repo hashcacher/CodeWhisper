@@ -588,4 +588,23 @@ You can reply to CodeWhisper with instructions such as:
       }
     }
   }
+
+  async pushChanges(
+    owner: string,
+    repo: string,
+    branchName: string,
+  ): Promise<void> {
+    try {
+      const git: SimpleGit = simpleGit('.');
+      await git.push('origin', branchName);
+      console.log(`Successfully pushed changes to ${branchName}`);
+    } catch (error) {
+      console.error('Error pushing changes:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to push changes: ${error.message}`);
+      } else {
+        throw new Error('Failed to push changes: Unknown error');
+      }
+    }
+  }
 }
