@@ -444,7 +444,6 @@ You can reply to CodeWhisper with instructions such as:
       if (comments.length === 0 && reviewComments.length === 0) {
         return '';
       }
-      console.log('comments', comments)
 
       // Get the last comment between comments and reviewComments
       comments.push(...reviewComments);
