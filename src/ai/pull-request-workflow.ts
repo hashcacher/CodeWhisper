@@ -245,6 +245,7 @@ async function revisePullRequest(
         'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
       );
       console.log(chalk.green('Successfully reverted last commit.'));
+      return;
     } catch (error) {
       console.error(chalk.red('Failed to revert last commit:'), error);
       await githubAPI.addCustomCommentToPR(
