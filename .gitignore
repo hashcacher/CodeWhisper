@@ -156,8 +156,9 @@ dist
 ehthumbs.db
 Thumbs.db
 
-# Vim configurations
+# Vim configs/backups
 .vim
+.*.sw?
 
 todos.md
 codewhisper.md
