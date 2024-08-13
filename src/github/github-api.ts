@@ -196,16 +196,30 @@ export class GitHubAPI {
           pull_number: prNumber,
         });
 
+      // Filter only comments that happened since the last AI generated revision
+      const lastAIRevision = comments.findLast((comment) =>
+        comment?.body?.includes('CodeWhisper commit information'),
+      );
+      const lastAIRevisionDate = new Date(lastAIRevision?.created_at || pr.created_at);
+      const commentsSinceLastAIRevision = comments.filter(
+        (comment) =>
+          new Date(comment.created_at) > lastAIRevisionDate,
+      );
+      const reviewCommentsSinceLastAIRevision = reviewComments.filter(
+        (comment) =>
+          new Date(comment.updated_at) > lastAIRevisionDate,
+      );
+
       return {
         title: pr.title,
         body: pr.body || '',
         head: pr.head,
-        comments: comments.map((comment) => ({
+        comments: commentsSinceLastAIRevision.map((comment) => ({
           user: comment.user?.login || 'unknown',
           body: comment.body || '',
           created_at: comment.created_at,
         })),
-        reviewComments: reviewComments.map((reviewComment) => ({
+        reviewComments: reviewCommentsSinceLastAIRevision.map((reviewComment) => ({
           user: reviewComment.user?.login || 'unknown',
           body: reviewComment.body || '',
           updated_at: reviewComment.updated_at,
@@ -586,6 +600,44 @@ You can reply to CodeWhisper with instructions such as:
       } else {
         throw new Error('Failed to create commit on PR: Unknown error');
       }
+    }
+  }
+
+  async pushChanges(
+    owner: string,
+    repo: string,
+    branchName: string,
+  ): Promise<void> {
+    try {
+      const git: SimpleGit = simpleGit('.');
+      await git.push('origin', branchName);
+      console.log(`Successfully pushed changes to ${branchName}`);
+    } catch (error) {
+      console.error('Error pushing changes:', error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to push changes: ${error.message}`);
+      } else {
+        throw new Error('Failed to push changes: Unknown error');
+      }
+    }
+  }
+
+  async addCustomCommentToPR(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    commentBody: string,
+  ): Promise<void> {
+    try {
+      await this.octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumber,
+        body: commentBody,
+      });
+    } catch (error) {
+      console.error('Error adding custom comment to pull request:', error);
+      throw new Error('Failed to add custom comment to pull request');
     }
   }
 }

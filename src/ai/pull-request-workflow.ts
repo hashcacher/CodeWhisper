@@ -25,7 +25,7 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
-import { checkoutBranch, commitAllChanges } from '../utils/git-tools';
+import { checkoutBranch, commitAllChanges, revertLastCommit } from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -231,6 +231,32 @@ async function revisePullRequest(
     );
     throw error;
   }
+
+  // Check if we need to revert the last commit
+  if (await needsRevert(prDetails, options)) {
+    console.log(chalk.yellow('Reverting last commit as requested...'));
+    try {
+      await revertLastCommit(basePath);
+      await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
+      await githubAPI.addCustomCommentToPR(
+        owner,
+        repo,
+        pr.number,
+        'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
+      );
+      console.log(chalk.green('Successfully reverted last commit.'));
+      return;
+    } catch (error) {
+      console.error(chalk.red('Failed to revert last commit:'), error);
+      await githubAPI.addCustomCommentToPR(
+        owner,
+        repo,
+        pr.number,
+        'An error occurred while attempting to revert the last commit. Please check the repository state and try again.'
+      );
+    }
+  }
+
   options.respectGitignore = true;
   const selectedFiles = await selectFilesForPROrIssue(
     JSON.stringify(prDetails),
@@ -421,4 +447,43 @@ async function generateAIResponseForPR(
     },
     modelConfig.temperature?.planningTemperature,
   );
+}
+
+  
+async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTaskOptions): Promise<boolean> {
+  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  const aiPrompt = `
+    Analyze the following comment and determine if the user is requesting to revert the last commit:
+    "${lastComment.body}"
+    Respond with 'true' if the user wants to revert, or 'false' otherwise.
+  `;
+
+   const generateOptions = {
+      maxCostThreshold: options.maxCostThreshold,
+      model: options.model,
+      maxTokens: 10,
+      logAiInteractions: options.logAiInteractions,
+    }
+  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3,);
+    
+  return aiResponse.trim().toLowerCase() === 'true';
+}
+
+async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTaskOptions): Promise<boolean> {
+  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  const aiPrompt = `
+    Analyze the following comment and determine if the user is requesting to revert the last commit:
+    "${lastComment.body}"
+    Respond with 'true' if the user wants to revert, or 'false' otherwise.
+  `;
+
+   const generateOptions = {
+      maxCostThreshold: options.maxCostThreshold,
+      model: options.model,
+      maxTokens: 10,
+      logAiInteractions: options.logAiInteractions,
+    }
+  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3,);
+
+  return aiResponse.trim().toLowerCase() === 'true';
 }

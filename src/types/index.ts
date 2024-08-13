@@ -178,6 +178,7 @@ export interface PullRequestDetails {
   number: number;
   title: string;
   body: string;
+  head: any;
   html_url: string;
   comments: any[];
   reviewComments: any[];
