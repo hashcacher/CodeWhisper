@@ -331,13 +331,13 @@ async function createPullRequestFromIssue(
     await commitAllChanges(basePath, commitMessage);
 
     // Create a commit with the changes
-    await githubAPI.createCommitOnBranch(
-      owner,
-      repo,
-      branchName,
-      `CodeWhisper: Implement changes for issue #${issue.number}`,
-      parsedResponse,
-    );
+    // await githubAPI.createCommitOnBranch(
+    //   owner,
+    //   repo,
+    //   branchName,
+    //   `CodeWhisper: Implement changes for issue #${issue.number}`,
+    //   parsedResponse,
+    // );
 
     // Create the pull request
     console.log(`Creating pull request for issue #${issue.number}...`);
