@@ -425,35 +425,35 @@ You can reply to CodeWhisper with instructions such as:
   async getLastComment(
     owner: string,
     repo: string,
-    number: number,
+    item: LabeledItem,
   ): Promise<string> {
     try {
       const { data: comments } = await this.octokit.issues.listComments({
         owner,
         repo,
-        issue_number: number,
+        issue_number: item.number,
       });
 
-      const { data: reviewComments } =
-        await this.octokit.pulls.listReviewComments({
-          owner,
-          repo,
-          pull_number: number,
-        });
+      if (item.pull_request) {
+        const {data: reviewComments} =
+          await this.octokit.pulls.listReviewComments({
+            owner,
+            repo,
+            pull_number: item.number,
+          });
 
-      if (comments.length === 0 && reviewComments.length === 0) {
+        comments.push(...reviewComments);
+      }
+      if (comments.length === 0) {
         return '';
       }
-
-      // Get the last comment between comments and reviewComments
-      comments.push(...reviewComments);
       comments.sort((a, b) => {
         const dateA = new Date(a.created_at).getTime();
         const dateB = new Date(b.created_at).getTime();
         return dateA - dateB;
       });
       const lastComment = comments[comments.length - 1];
-      return lastComment.body;
+      return lastComment.body || '';
     } catch (error) {
       console.error('Error fetching last interaction:', error);
       throw new Error('Failed to fetch last interaction');
