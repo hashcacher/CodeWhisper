@@ -138,8 +138,6 @@ async function processItem(
   const aiResponse = await generateAIResponse(
     JSON.stringify(details),
     options,
-    basePath,
-    selectedFiles,
   );
 
   const parsedResponse = parseAICodegenResponse(
