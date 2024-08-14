@@ -329,6 +329,7 @@ async function createPullRequestFromIssue(
     await applyChanges({ basePath, parsedResponse, dryRun: false });
     const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`;
     await commitAllChanges(basePath, commitMessage);
+    await githubAPI.pushChanges(owner, repo, branchName);
 
     // Create a commit with the changes
     // await githubAPI.createCommitOnBranch(
