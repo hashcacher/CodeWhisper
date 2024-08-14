@@ -13,6 +13,7 @@ import type {
   LabeledItem,
   GitHubIssue,
   AIParsedResponse,
+  SharedContext,
 } from '../types';
 import { TaskCache } from '../utils/task-cache';
 import { getTemplatePath } from '../utils/template-utils';
@@ -28,15 +29,6 @@ import {
 } from './task-workflow';
 import { checkoutBranch, commitAllChanges, revertLastCommit } from '../utils/git-tools';
 
-interface SharedContext {
-  owner: string;
-  repo: string;
-  basePath: string;
-  githubAPI: GitHubAPI;
-  taskCache: TaskCache;
-  options: AiAssistedTaskOptions;
-}
-
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
@@ -49,7 +41,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       return;
     }
 
-    await processPullRequest(context, prInfo, spinner);
+    await processItem(context, { ...prInfo, pull_request: { url: prInfo.html_url } }, spinner);
 
     console.log(chalk.green('Pull request workflow completed'));
   } catch (error) {
@@ -119,30 +111,32 @@ async function getOrCreatePullRequest(
   return prInfo;
 }
 
-async function processPullRequest(
+async function processItem(
   context: SharedContext,
-  prInfo: { number: number; html_url: string },
+  item: LabeledItem,
   spinner: ora.Ora
 ) {
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
-  const prDetails = await githubAPI.getPullRequestDetails(
-    owner,
-    repo,
-    prInfo.number,
-  );
-  if (!needsAction(prDetails)) {
+  let details: PullRequestDetails | GitHubIssue;
+  if (item.pull_request) {
+    details = await githubAPI.getPullRequestDetails(owner, repo, item.number);
+  } else {
+    details = await githubAPI.getIssueDetails(owner, repo, item.number);
+  }
+
+  if (!needsAction(details)) {
     return;
   }
 
   const selectedFiles = await selectFilesForPROrIssue(
-    JSON.stringify(prDetails),
+    JSON.stringify(details),
     options,
     basePath,
   );
 
-  const aiResponse = await generateAIResponseForPR(
-    prDetails,
+  const aiResponse = await generateAIResponse(
+    details,
     options,
     basePath,
     selectedFiles,
@@ -165,36 +159,38 @@ async function processPullRequest(
     await applyCodeModifications(options, basePath, parsedResponse);
   }
 
-  await applyChangesToPullRequest(context, prInfo.number, parsedResponse, selectedFiles, spinner);
+  await applyChangesToItem(context, item, parsedResponse, selectedFiles, spinner);
 }
 
-async function applyChangesToPullRequest(
+async function applyChangesToItem(
   context: SharedContext,
-  prNumber: number,
+  item: LabeledItem,
   parsedResponse: AIParsedResponse,
   selectedFiles: string[],
   spinner: ora.Ora
 ) {
   const { owner, repo, githubAPI } = context;
 
-  spinner.start('Applying changes to the pull request...');
-  await githubAPI.applyChangesToPR(
+  spinner.start(`Applying changes to the ${item.pull_request ? 'pull request' : 'issue'}...`);
+  await githubAPI.applyChangesToItem(
     owner,
     repo,
-    prNumber,
+    item.number,
     parsedResponse,
+    item.pull_request !== undefined
   );
-  spinner.succeed('Changes applied to the pull request');
+  spinner.succeed(`Changes applied to the ${item.pull_request ? 'pull request' : 'issue'}`);
 
-  spinner.start('Adding comment to the pull request...');
-  await githubAPI.addCommentToPR(
+  spinner.start(`Adding comment to the ${item.pull_request ? 'pull request' : 'issue'}...`);
+  await githubAPI.addCommentToItem(
     owner,
     repo,
-    prNumber,
+    item.number,
     selectedFiles,
     parsedResponse,
+    item.pull_request !== undefined
   );
-  spinner.succeed('Comment added to the pull request');
+  spinner.succeed(`Comment added to the ${item.pull_request ? 'pull request' : 'issue'}`);
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
@@ -207,7 +203,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       const labeledItems = await context.githubAPI.getCodeWhisperLabeledItems(context.owner, context.repo);
 
       for (const item of labeledItems) {
-        await processLabeledItem(context, item, spinner);
+        await processItem(context, item, spinner);
       }
 
       spinner.succeed('Iteration completed. Waiting a minute before next iteration...');
@@ -222,32 +218,6 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
   }
 
   await revisionLoop();
-}
-
-async function processLabeledItem(context: SharedContext, item: LabeledItem, spinner: ora.Ora) {
-  const { owner, repo, githubAPI, options } = context;
-  spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
-
-  try {
-    const lastComment = await githubAPI.getLastComment(owner, repo, item);
-    if (lastComment.includes('CodeWhisper commit information')) {
-      spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
-      return;
-    }
-
-    if (item.pull_request) {
-      console.log(`Revising PR #${item.number}`);
-      await revisePullRequest(context, item);
-    } else {
-      console.log(`Creating PR from issue #${item.number}`);
-      await createPullRequestFromIssue(context, item);
-    }
-  } catch (itemError) {
-    console.error(
-      `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
-      itemError,
-    );
-  }
 }
 
 async function revisePullRequest(context: SharedContext, pr: LabeledItem) {
