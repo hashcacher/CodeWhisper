@@ -136,7 +136,7 @@ async function processItem(
   );
 
   const aiResponse = await generateAIResponse(
-    details,
+    JSON.stringify(details),
     options,
     basePath,
     selectedFiles,
