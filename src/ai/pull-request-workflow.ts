@@ -10,7 +10,7 @@ import { GitHubAPI } from '../github/github-api';
 import type {
   AiAssistedTaskOptions,
   PullRequestDetails,
-  LabeledIssue,
+  LabeledItem,
   GitHubIssue,
   AIParsedResponse,
   PRWorkflowContext,
@@ -127,7 +127,7 @@ async function getOrCreatePullRequest(
 
 async function processIssue(
   context: PRWorkflowContext,
-  issue: LabeledIssue,
+  issue: LabeledItem,
   spinner: ora.Ora,
 ) {
   const {owner, repo, basePath, githubAPI, taskCache, options} = context;
@@ -202,14 +202,14 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
   async function revisionLoop() {
     try {
-      spinner.text = 'Fetching CodeWhisper labeled items...';
-      const labeledItems = await context.githubAPI.getCodeWhisperLabeledItems(
+      spinner.text = 'Fetching CodeWhisper labeled issues...';
+      const labeledIssues = await context.githubAPI.getCodeWhisperLabeledItems(
         context.owner,
         context.repo,
       );
 
-      for (const item of labeledItems) {
-        await processIssue(context, item, spinner);
+      for (const issue of labeledIssues) {
+        await processIssue(context, issue, spinner);
       }
 
       spinner.succeed(
@@ -230,7 +230,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
 async function handleRevert(
   context: PRWorkflowContext,
-  pr: LabeledIssue,
+  pr: LabeledItem,
   prDetails: PullRequestDetails,
 ) {
   const { owner, repo, basePath, githubAPI } = context;

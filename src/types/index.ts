@@ -168,16 +168,39 @@ export interface TaskData {
   prInfo?: PullRequestInfo;
 }
 
-export interface PullRequestInfo extends LabeledIssue {}
+export interface LabeledItem {
+  number: number;
+  title: string;
+  body: string | null;
+  html_url: string;
+  pull_request?: { url: string };
+}
+
+export interface PullRequestInfo extends LabeledItem {}
 
 export interface PullRequestDetails {
   number: number;
   title: string;
   body: string;
-  head: any;
+  head: {
+    ref: string;
+  };
   html_url: string;
-  comments: any[];
-  reviewComments: any[];
+  comments: Comment[];
+  review_comments: Comment[];
+}
+
+export interface Comment {
+  body: string;
+}
+
+export interface PRWorkflowContext {
+  owner: string;
+  repo: string;
+  basePath: string;
+  githubAPI: GitHubAPI;
+  taskCache: TaskCache;
+  options: AiAssistedTaskOptions;
 }
 
 export interface AIFileChange {
