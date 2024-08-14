@@ -168,11 +168,7 @@ export interface TaskData {
   prInfo?: PullRequestInfo;
 }
 
-export interface PullRequestInfo {
-  number: number;
-  title: string;
-  html_url: string;
-}
+export interface PullRequestInfo extends LabeledIssue {}
 
 export interface PullRequestDetails {
   number: number;

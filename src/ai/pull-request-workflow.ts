@@ -10,10 +10,10 @@ import { GitHubAPI } from '../github/github-api';
 import type {
   AiAssistedTaskOptions,
   PullRequestDetails,
-  LabeledItem,
+  LabeledIssue,
   GitHubIssue,
   AIParsedResponse,
-  SharedContext,
+  PRWorkflowContext,
 } from '../types';
 import { TaskCache } from '../utils/task-cache';
 import { getTemplatePath } from '../utils/template-utils';
@@ -36,7 +36,7 @@ import {
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
-    const context = await initializeSharedContext(options);
+    const context = await initializePRWorkflowContext(options);
     const branchName = await context.taskCache.getCurrentBranch();
     const prInfo = await getOrCreatePullRequest(context, branchName, spinner);
 
@@ -45,11 +45,15 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       return;
     }
 
-    await processItem(
+    await processIssue(
       context,
       { ...prInfo, pull_request: { url: prInfo.html_url } },
       spinner,
     );
+
+    if (await needsRevert(prInfo, options)) {
+      await handleRevert(context, prInfo, prInfo);
+    }
 
     console.log(chalk.green('Pull request workflow completed'));
   } catch (error) {
@@ -58,9 +62,9 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   }
 }
 
-async function initializeSharedContext(
+async function initializePRWorkflowContext(
   options: AiAssistedTaskOptions,
-): Promise<SharedContext> {
+): Promise<PRWorkflowContext> {
   const basePath = path.resolve(options.path ?? '.');
   const githubAPI = new GitHubAPI();
   const taskCache = new TaskCache(options.path || process.cwd());
@@ -81,7 +85,7 @@ async function initializeSharedContext(
 }
 
 async function getOrCreatePullRequest(
-  context: SharedContext,
+  context: PRWorkflowContext,
   branchName: string,
   spinner: ora.Ora,
 ) {
@@ -121,9 +125,9 @@ async function getOrCreatePullRequest(
   return prInfo;
 }
 
-async function processItem(
-  context: SharedContext,
-  issue: LabeledItem,
+async function processIssue(
+  context: PRWorkflowContext,
+  issue: LabeledIssue,
   spinner: ora.Ora,
 ) {
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
@@ -215,8 +219,8 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 }
 
 async function handleRevert(
-  context: SharedContext,
-  pr: LabeledItem,
+  context: PRWorkflowContext,
+  pr: LabeledIssue,
   prDetails: PullRequestDetails,
 ) {
   const { owner, repo, basePath, githubAPI } = context;
