@@ -354,6 +354,9 @@ async function generateAIResponseForIssue(
 
 async function needsAction(prDetails: PullRequestDetails) {
   const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  if (!lastComment) {
+    return true;
+  }
   return lastComment.body.includes('AI-generated changes have been applied');
 }
 
