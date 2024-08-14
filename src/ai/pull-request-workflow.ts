@@ -357,7 +357,7 @@ async function needsAction(prDetails: PullRequestDetails) {
   if (!lastComment) {
     return true;
   }
-  return lastComment.body.includes('AI-generated changes have been applied');
+  return !lastComment.body.startsWith('AI-generated changes have been applied');
 }
 
 async function generateAIResponseForPR(
