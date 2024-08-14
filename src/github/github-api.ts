@@ -554,7 +554,7 @@ You can reply to CodeWhisper with instructions such as:
     repo: string,
     branchName: string,
     baseBranch: string,
-  ): Promise<void> {
+  ): Promise<string> {
     try {
       const git: SimpleGit = simpleGit('.');
 
@@ -566,7 +566,7 @@ You can reply to CodeWhisper with instructions such as:
       await git.pull('origin', baseBranch);
 
       // Create and checkout the new branch
-      await ensureBranch('.', branchName);
+      const newBranchName = await ensureBranch('.', branchName);
 
       // Push the new branch to the remote
       await git.push('origin', branchName);
@@ -574,6 +574,8 @@ You can reply to CodeWhisper with instructions such as:
       console.log(
         `Successfully created and pushed branch ${branchName} based on ${baseBranch}`,
       );
+      
+      return newBranchName;
     } catch (error) {
       console.error('Error creating/updating branch:', error);
       if (error instanceof Error) {
