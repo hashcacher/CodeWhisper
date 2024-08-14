@@ -598,6 +598,7 @@ export async function applyCodeModifications(
         ),
       );
     }
+    return actualBranchName;
   } catch (error) {
     spinner.fail('Error applying AI Code Modifications');
     console.error(

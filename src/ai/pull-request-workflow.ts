@@ -130,7 +130,7 @@ async function processIssue(
   issue: LabeledIssue,
   spinner: ora.Ora,
 ) {
-  const { owner, repo, basePath, githubAPI, taskCache, options } = context;
+  const {owner, repo, basePath, githubAPI, taskCache, options} = context;
 
   let details: PullRequestDetails | GitHubIssue;
   if (issue.pull_request) {
@@ -145,7 +145,7 @@ async function processIssue(
 
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(details),
-    { ...options, respectGitignore: true, diff: true },
+    {...options, respectGitignore: true, diff: true},
     basePath,
   );
 
@@ -168,19 +168,29 @@ async function processIssue(
       parsedResponse,
       taskCache.getLastTaskData(basePath)?.taskDescription || '',
     );
-  } else {
-    options.autoCommit = true;
-    await applyCodeModifications(options, basePath, parsedResponse);
-  }
 
-  await githubAPI.addCommentToIssue(
-    owner,
-    repo,
-    issue.number,
-    selectedFiles,
-    parsedResponse,
-    issue.pull_request !== undefined,
-  );
+    return;
+  } 
+  const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse);
+
+  if (issue.pull_request) {
+    await githubAPI.addCommentToIssue(
+      owner,
+      repo,
+      issue.number,
+      selectedFiles,
+      parsedResponse,
+      issue.pull_request !== undefined,
+    );
+  } else {
+    await githubAPI.createPullRequest(
+      owner,
+      repo,
+      branchName,
+      `Implement issue #${issue.number} [CodeWhisper]`,
+      parsedResponse,
+    );
+  }
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
@@ -199,7 +209,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       );
 
       for (const item of labeledItems) {
-        await processItem(context, item, spinner);
+        await processIssue(context, item, spinner);
       }
 
       spinner.succeed(
