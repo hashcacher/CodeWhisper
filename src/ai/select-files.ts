@@ -12,7 +12,7 @@ import { generateAIResponse } from './generate-ai-response';
  * @param basePath - Base path of the repository
  * @returns A list of selected files relevant to the PR
  */
-export async function selectFilesForPROrIssue(
+export async function selectFilesForIssue(
   prOrIssue: string,
   options: AiAssistedTaskOptions,
   basePath: string,

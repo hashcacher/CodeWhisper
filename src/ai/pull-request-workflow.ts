@@ -20,7 +20,7 @@ import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
-import { selectFilesForPROrIssue } from './select-files';
+import { selectFilesForIssue as selectFilesForIssue } from './select-files';
 import { applyChanges } from './apply-changes';
 import {
   applyCodeModifications,
@@ -113,23 +113,23 @@ async function getOrCreatePullRequest(
 
 async function processItem(
   context: SharedContext,
-  item: LabeledItem,
+  issue: LabeledItem,
   spinner: ora.Ora
 ) {
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
   let details: PullRequestDetails | GitHubIssue;
-  if (item.pull_request) {
-    details = await githubAPI.getPullRequestDetails(owner, repo, item.number);
+  if (issue.pull_request) {
+    details = await githubAPI.getPullRequestDetails(owner, repo, issue.number);
   } else {
-    details = await githubAPI.getIssueDetails(owner, repo, item.number);
+    details = await githubAPI.getIssueDetails(owner, repo, issue.number);
   }
 
   if (!await needsAction(details)) {
     return;
   }
 
-  const selectedFiles = await selectFilesForPROrIssue(
+  const selectedFiles = await selectFilesForIssue(
     JSON.stringify(details),
     options,
     basePath,
@@ -159,7 +159,7 @@ async function processItem(
     await applyCodeModifications(options, basePath, parsedResponse);
   }
 
-  await applyChangesToItem(context, item, parsedResponse, selectedFiles, spinner);
+  await applyChangesToItem(context, issue, parsedResponse, selectedFiles, spinner);
 }
 
 async function applyChangesToItem(
@@ -233,7 +233,7 @@ async function revisePullRequest(context: SharedContext, pr: LabeledItem) {
       return;
     }
 
-    const selectedFiles = await selectFilesForPROrIssue(
+    const selectedFiles = await selectFilesForIssue(
       JSON.stringify(prDetails),
       { ...options, respectGitignore: true },
       basePath,
@@ -289,7 +289,7 @@ async function createPullRequestFromIssue(context: SharedContext, issue: GitHubI
     const defaultBranch = await githubAPI.getDefaultBranch(owner, repo);
     branchName = await githubAPI.createBranch(owner, repo, branchName, defaultBranch);
 
-    const selectedFiles = await selectFilesForPROrIssue(
+    const selectedFiles = await selectFilesForIssue(
       JSON.stringify(issue),
       { ...options, respectGitignore: true, diff: true },
       basePath,
