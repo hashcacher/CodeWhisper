@@ -268,7 +268,6 @@ async function revisePullRequest(context: SharedContext, pr: LabeledItem) {
       { ...options, respectGitignore: true },
       basePath,
     );
-    console.log('Selected files:', selectedFiles);
 
     const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
     const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
