@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { confirm, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
@@ -23,121 +23,81 @@ import { applyChanges } from './apply-changes';
 import {
   applyCodeModifications,
   handleDryRun,
-  selectFiles,
 } from './task-workflow';
 import { checkoutBranch, commitAllChanges, revertLastCommit } from '../utils/git-tools';
+
+async function initializeWorkflow(options: AiAssistedTaskOptions) {
+  const basePath = path.resolve(options.path ?? '.');
+  const githubAPI = new GitHubAPI();
+  const taskCache = new TaskCache(options.path || process.cwd());
+  const repoInfo = await taskCache.getRepoInfo();
+  if (!repoInfo) {
+    throw new Error('Unable to determine repository information');
+  }
+  return { basePath, githubAPI, taskCache, repoInfo };
+}
+
+async function handleExistingOrNewPR(githubAPI: GitHubAPI, owner: string, repo: string, branchName: string, options: AiAssistedTaskOptions, taskCache: TaskCache) {
+  let prInfo = await githubAPI.checkForExistingPR(owner, repo, branchName, options.prNumber);
+  const spinner = ora();
+
+  if (!prInfo) {
+    spinner.start('Creating new pull request...');
+    const title = await input({ message: 'Enter pull request title:' });
+    let body = await input({ message: 'Enter pull request description:' });
+
+    const issueNumber = extractIssueNumberFromBranch(branchName);
+    if (issueNumber) {
+      body = `Closes #${issueNumber}\n\n${body}`;
+    }
+
+    prInfo = await githubAPI.createPullRequest(owner, repo, branchName, title, body);
+    await taskCache.setPRInfo(prInfo);
+    spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
+  } else {
+    spinner.succeed(`Using pull request: ${prInfo.html_url}`);
+  }
+
+  return prInfo;
+}
+
+async function generateAndApplyChanges(prDetails: PullRequestDetails, options: AiAssistedTaskOptions, basePath: string, githubAPI: GitHubAPI, owner: string, repo: string) {
+  const selectedFiles = await selectFilesForPROrIssue(JSON.stringify(prDetails), options, basePath);
+  const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
+  const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
+
+  if (options.dryRun) {
+    await handleDryRun(basePath, parsedResponse, options.taskDescription || '');
+  } else {
+    options.autoCommit = true;
+    await applyCodeModifications(options, basePath, parsedResponse);
+  }
+
+  const spinner = ora();
+  spinner.start('Applying changes to the pull request...');
+  await githubAPI.applyChangesToPR(owner, repo, prDetails.number, parsedResponse);
+  spinner.succeed('Changes applied to the pull request');
+
+  spinner.start('Adding comment to the pull request...');
+  await githubAPI.addCommentToPR(owner, repo, prDetails.number, selectedFiles, parsedResponse);
+  spinner.succeed('Comment added to the pull request');
+}
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
-    const basePath = path.resolve(options.path ?? '.');
-    const githubAPI = new GitHubAPI();
-    const taskCache = new TaskCache(options.path || process.cwd());
-
-    // Get repository information
-    const repoInfo = await taskCache.getRepoInfo();
-    if (!repoInfo) {
-      throw new Error('Unable to determine repository information');
-    }
+    const { basePath, githubAPI, taskCache, repoInfo } = await initializeWorkflow(options);
     const { owner, repo } = repoInfo;
 
-    // Check for existing PR or create a new one
     const branchName = await taskCache.getCurrentBranch();
-    let prInfo = await githubAPI.checkForExistingPR(
-      owner,
-      repo,
-      branchName,
-      options.prNumber,
-    );
+    const prInfo = await handleExistingOrNewPR(githubAPI, owner, repo, branchName, options, taskCache);
 
-    if (!prInfo) {
-      spinner.text = 'Creating new pull request...';
-      const title = await input({ message: 'Enter pull request title:' });
-      let body = await input({ message: 'Enter pull request description:' });
-
-      // Extract issue number from branch name and link it to the PR
-      const issueNumber = extractIssueNumberFromBranch(branchName);
-      if (issueNumber) {
-        body = `Closes #${issueNumber}\n\n${body}`;
-      }
-
-      spinner.start('Creating new pull request...');
-      prInfo = await githubAPI.createPullRequest(
-        owner,
-        repo,
-        branchName,
-        title,
-        body,
-      );
-      await taskCache.setPRInfo(prInfo);
-      spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
-    } else {
-      spinner.succeed(`Using pull request: ${prInfo.html_url}`);
-    }
-
-    // Fetch PR details
-    const prDetails = await githubAPI.getPullRequestDetails(
-      owner,
-      repo,
-      prInfo.number,
-    );
+    const prDetails = await githubAPI.getPullRequestDetails(owner, repo, prInfo.number);
     if (!needsAction(prDetails)) {
       return;
     }
 
-    // Select relevant files using AI
-    const selectedFiles = await selectFilesForPROrIssue(
-      JSON.stringify(prDetails),
-      options,
-      basePath,
-    );
-
-    // Generate AI response based on pull request details
-    const aiResponse = await generateAIResponseForPR(
-      prDetails,
-      options,
-      basePath,
-      selectedFiles,
-    );
-
-    // Parse AI response
-    const parsedResponse = parseAICodegenResponse(
-      aiResponse,
-      options.logAiInteractions,
-      true,
-    );
-
-    if (options.dryRun) {
-      await handleDryRun(
-        basePath,
-        parsedResponse,
-        taskCache.getLastTaskData(basePath)?.taskDescription || '',
-      );
-    } else {
-      options.autoCommit = true;
-      await applyCodeModifications(options, basePath, parsedResponse);
-    }
-
-    // Apply changes to the pull request
-    spinner.start('Applying changes to the pull request...');
-    await githubAPI.applyChangesToPR(
-      owner,
-      repo,
-      prInfo.number,
-      parsedResponse,
-    );
-    spinner.succeed('Changes applied to the pull request');
-
-    // Add a comment to the pull request
-    spinner.start('Adding comment to the pull request...');
-    await githubAPI.addCommentToPR(
-      owner,
-      repo,
-      prInfo.number,
-      selectedFiles,
-      parsedResponse,
-    );
-    spinner.succeed('Comment added to the pull request');
+    await generateAndApplyChanges(prDetails, options, basePath, githubAPI, owner, repo);
 
     console.log(chalk.green('Pull request workflow completed'));
   } catch (error) {
@@ -146,19 +106,28 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   }
 }
 
+async function processLabeledItem(item: LabeledItem, owner: string, repo: string, options: AiAssistedTaskOptions, githubAPI: GitHubAPI) {
+  const lastComment = await githubAPI.getLastComment(owner, repo, item);
+  if (lastComment.includes('CodeWhisper commit information')) {
+    console.log(`Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`);
+    return;
+  }
+
+  if (item.pull_request) {
+    console.log(`Revising PR #${item.number}`);
+    await revisePullRequest(owner, repo, item, options, githubAPI);
+  } else {
+    console.log(`Creating PR from issue #${item.number}`);
+    await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
+  }
+}
+
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
-  const spinner = ora({text: 'Starting continuous PR revision process...',discardStdin: false,}).start();
+  const spinner = ora({text: 'Starting continuous PR revision process...', discardStdin: false}).start();
 
   async function revisionLoop() {
     try {
-      const githubAPI = new GitHubAPI();
-      const taskCache = new TaskCache(options.path || process.cwd());
-
-      // Get repository information
-      const repoInfo = await taskCache.getRepoInfo();
-      if (!repoInfo) {
-        throw new Error('Unable to determine repository information');
-      }
+      const { githubAPI, taskCache, repoInfo } = await initializeWorkflow(options);
       const { owner, repo } = repoInfo;
 
       spinner.text = 'Fetching CodeWhisper labeled items...';
@@ -166,27 +135,10 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
       for (const item of labeledItems) {
         spinner.text = `Processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}`;
-
         try {
-          const lastComment = await githubAPI.getLastComment(owner, repo, item);
-          if (lastComment.includes('CodeWhisper commit information')) {
-            spinner.text = `Skipping ${item.pull_request ? 'PR' : 'issue'} #${item.number} - last interaction was by the bot`;
-            continue;
-          }
-
-          if (item.pull_request) {
-            console.log(`Revising PR #${item.number}`);
-            await revisePullRequest(owner, repo, item, options, githubAPI);
-          } else {
-            console.log(`Creating PR from issue #${item.number}`);
-            await createPullRequestFromIssue(owner, repo, item, options, githubAPI);
-          }
+          await processLabeledItem(item, owner, repo, options, githubAPI);
         } catch (itemError) {
-          console.error(
-            `Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`,
-            itemError,
-          );
-          // Continue with the next item
+          console.error(`Error processing ${item.pull_request ? 'PR' : 'issue'} #${item.number}:`, itemError);
         }
       }
 
@@ -196,13 +148,11 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       console.error(chalk.red('Error:'), error);
     }
 
-    // Wait for 1 minute before the next iteration
     await new Promise(resolve => setTimeout(resolve, 1 * 60 * 1000));
     spinner.start('Starting next iteration...');
     await revisionLoop();
   }
 
-  // Start the continuous revision loop
   await revisionLoop();
 }
 
@@ -214,78 +164,64 @@ async function revisePullRequest(
   githubAPI: GitHubAPI,
 ) {
   const basePath = path.resolve(options.path ?? '.');
-  const prDetails = await githubAPI.getPullRequestDetails(
-    owner,
-    repo,
-    pr.number,
-  );
+  const prDetails = await githubAPI.getPullRequestDetails(owner, repo, pr.number);
 
-  // Checkout the PR branch
   try {
     await checkoutBranch(basePath, prDetails.head.ref);
     console.log(chalk.green(`Checked out branch: ${prDetails.head.ref}`));
+
+    if (await needsRevert(prDetails, options)) {
+      await handleRevert(basePath, owner, repo, pr.number, prDetails.head.ref, githubAPI);
+      return;
+    }
+
+    options.respectGitignore = true;
+    const selectedFiles = await selectFilesForPROrIssue(JSON.stringify(prDetails), options, basePath);
+    console.log('Selected files:', selectedFiles);
+
+    const aiResponse = await generateAIResponseForPR(prDetails, options, basePath, selectedFiles);
+    const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
+
+    await applyChanges({ basePath, parsedResponse, dryRun: false });
+    const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`;
+    await commitAllChanges(basePath, commitMessage);
+
+    await githubAPI.createCommitOnPR(owner, repo, pr.number, 'CodeWhisper: Automated PR revision', parsedResponse);
+    await githubAPI.addCommentToPR(owner, repo, pr.number, selectedFiles, parsedResponse);
   } catch (error) {
-    console.error(
-      chalk.red(`Failed to checkout branch: ${prDetails.head.ref}`),
-      error,
+    console.error(chalk.red(`Failed to process PR #${pr.number}:`), error);
+    await githubAPI.addCustomCommentToPR(
+      owner,
+      repo,
+      pr.number,
+      'An error occurred while processing this pull request. Please check the repository state and try again.'
     );
     throw error;
   }
+}
 
-  // Check if we need to revert the last commit
-  if (await needsRevert(prDetails, options)) {
-    console.log(chalk.yellow('Reverting last commit as requested...'));
-    try {
-      await revertLastCommit(basePath);
-      await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
-      await githubAPI.addCustomCommentToPR(
-        owner,
-        repo,
-        pr.number,
-        'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
-      );
-      console.log(chalk.green('Successfully reverted last commit.'));
-      return;
-    } catch (error) {
-      console.error(chalk.red('Failed to revert last commit:'), error);
-      await githubAPI.addCustomCommentToPR(
-        owner,
-        repo,
-        pr.number,
-        'An error occurred while attempting to revert the last commit. Please check the repository state and try again.'
-      );
-    }
+async function handleRevert(basePath: string, owner: string, repo: string, prNumber: number, branchRef: string, githubAPI: GitHubAPI) {
+  console.log(chalk.yellow('Reverting last commit as requested...'));
+  try {
+    await revertLastCommit(basePath);
+    await githubAPI.pushChanges(owner, repo, branchRef);
+    await githubAPI.addCustomCommentToPR(
+      owner,
+      repo,
+      prNumber,
+      'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
+    );
+    console.log(chalk.green('Successfully reverted last commit.'));
+  } catch (error) {
+    console.error(chalk.red('Failed to revert last commit:'), error);
+    await githubAPI.addCustomCommentToPR(
+      owner,
+      repo,
+      prNumber,
+      'An error occurred while attempting to revert the last commit. Please check the repository state and try again.'
+    );
+    throw error;
   }
-
-  options.respectGitignore = true;
-  const selectedFiles = await selectFilesForPROrIssue(
-    JSON.stringify(prDetails),
-    options,
-    basePath,
-  );
-  console.log('Selected files:', selectedFiles)
-  const aiResponse = await generateAIResponseForPR(
-    prDetails,
-    options,
-    basePath,
-    selectedFiles,
-  );
-  const parsedResponse = parseAICodegenResponse(
-    aiResponse,
-    options.logAiInteractions,
-    true,
-  );
-  await applyChanges({ basePath, parsedResponse, dryRun: false });
-  const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`;
-  await commitAllChanges(basePath, commitMessage);
-  await githubAPI.createCommitOnPR(
-    owner,
-    repo,
-    pr.number,
-    'CodeWhisper: Automated PR revision',
-    parsedResponse,
-  );
-  await githubAPI.addCommentToPR(owner, repo, pr.number, selectedFiles, parsedResponse);
 }
 
 async function createPullRequestFromIssue(
@@ -300,66 +236,28 @@ async function createPullRequestFromIssue(
   const prBody = `CodeWhisper autogenerated PR. Reply to this PR to have CodeWhisper make revisions.\n\nfix: #${issue.number}\n\n${issue.body}`;
 
   try {
-    // Get the SHA of the default branch (assuming it's 'main')
     const defaultBranch = await githubAPI.getDefaultBranch(owner, repo);
-
-    // Create a new branch
     await githubAPI.createBranch(owner, repo, branchName, defaultBranch);
 
-    // Generate and apply changes
     const basePath = path.resolve(options.path ?? '.');
     options.respectGitignore = true;
     options.diff = true;
-    const selectedFiles = await selectFilesForPROrIssue(
-      JSON.stringify(issue),
-      options,
-      basePath,
-    );
-    const aiResponse = await generateAIResponseForIssue(
-      issue,
-      selectedFiles,
-      options,
-      basePath,
-    );
-    const parsedResponse = parseAICodegenResponse(
-      aiResponse,
-      options.logAiInteractions,
-      true,
-    );
+
+    const selectedFiles = await selectFilesForPROrIssue(JSON.stringify(issue), options, basePath);
+    const aiResponse = await generateAIResponseForIssue(issue, selectedFiles, options, basePath);
+    const parsedResponse = parseAICodegenResponse(aiResponse, options.logAiInteractions, true);
+
     await applyChanges({ basePath, parsedResponse, dryRun: false });
     const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`;
     await commitAllChanges(basePath, commitMessage);
 
-    // Create a commit with the changes
-    // await githubAPI.createCommitOnBranch(
-    //   owner,
-    //   repo,
-    //   branchName,
-    //   `CodeWhisper: Implement changes for issue #${issue.number}`,
-    //   parsedResponse,
-    // );
-
-    // Create the pull request
     console.log(`Creating pull request for issue #${issue.number}...`);
-    const prInfo = await githubAPI.createPullRequest(
-      owner,
-      repo,
-      branchName,
-      prTitle,
-      prBody,
-    );
-    await githubAPI.addCommentToPR(
-      owner,
-      repo,
-      prInfo.number,
-      selectedFiles,
-      parsedResponse,
-    );
+    const prInfo = await githubAPI.createPullRequest(owner, repo, branchName, prTitle, prBody);
+    await githubAPI.addCommentToPR(owner, repo, prInfo.number, selectedFiles, parsedResponse);
+
+    return prInfo;
   } catch (error) {
-    console.error(
-      `Error creating pull request for issue #${issue.number}:`,
-      error,
-    );
+    console.error(`Error creating pull request for issue #${issue.number}:`, error);
     throw error;
   }
 }
