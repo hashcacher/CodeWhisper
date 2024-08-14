@@ -44,7 +44,11 @@ FORMAT: Instructions for how to format your response.
 ---
 
 <format>
-Generate SEARCH/REPLACE blocks for modified files, full content for new files, and only the file path for deleted files.
+For modified files: generate small SEARCH/REPLACE blocks
+For new files: generate full content for new files
+For deleted files: just the file path
+
+Make sure the modified file modifications are broken up into small diffs.
 
 If you don't need to modify a file, don't include it - this simplifies Git diffs.
 
