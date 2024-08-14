@@ -234,28 +234,11 @@ export class GitHubAPI {
     }
   }
 
-  async applyChangesToPR(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    changes: AIParsedResponse,
-  ): Promise<void> {
-    try {
-      // This is a placeholder implementation. In a real scenario, you would:
-      // 1. Create a new commit with the changes
-      // 2. Update the pull request branch with the new commit
-      console.log(`Applying changes to PR #${prNumber}`);
-      console.log('Changes:', JSON.stringify(changes, null, 2));
-    } catch (error) {
-      console.error('Error applying changes to pull request:', error);
-      throw new Error('Failed to apply changes to pull request');
-    }
-  }
 
-  async addCommentToPR(
+  async addCommentToIssue(
     owner: string,
     repo: string,
-    prNumber: number,
+    number: number,
     selectedFiles: string[],
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
@@ -281,7 +264,7 @@ You can reply to CodeWhisper with instructions such as:
       await this.octokit.issues.createComment({
         owner,
         repo,
-        issue_number: prNumber,
+        issue_number: number,
         body: comment,
       });
     } catch (error) {

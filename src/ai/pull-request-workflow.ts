@@ -157,7 +157,7 @@ async function processItem(
     await applyCodeModifications(options, basePath, parsedResponse);
   }
 
-  await githubAPI.addCommentToItem(
+  await githubAPI.addCommentToIssue(
     owner,
     repo,
     issue.number,
