@@ -157,38 +157,14 @@ async function processItem(
     await applyCodeModifications(options, basePath, parsedResponse);
   }
 
-  await applyChangesToItem(context, issue, parsedResponse, selectedFiles, spinner);
-}
-
-async function applyChangesToItem(
-  context: SharedContext,
-  item: LabeledItem,
-  parsedResponse: AIParsedResponse,
-  selectedFiles: string[],
-  spinner: ora.Ora
-) {
-  const { owner, repo, githubAPI } = context;
-
-  spinner.start(`Applying changes to the ${item.pull_request ? 'pull request' : 'issue'}...`);
-  await githubAPI.applyChangesToItem(
-    owner,
-    repo,
-    item.number,
-    parsedResponse,
-    item.pull_request !== undefined
-  );
-  spinner.succeed(`Changes applied to the ${item.pull_request ? 'pull request' : 'issue'}`);
-
-  spinner.start(`Adding comment to the ${item.pull_request ? 'pull request' : 'issue'}...`);
   await githubAPI.addCommentToItem(
     owner,
     repo,
-    item.number,
+    issue.number,
     selectedFiles,
     parsedResponse,
-    item.pull_request !== undefined
+    issue.pull_request !== undefined
   );
-  spinner.succeed(`Comment added to the ${item.pull_request ? 'pull request' : 'issue'}`);
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
