@@ -116,9 +116,14 @@ export function applySearchReplace(
   let result = source;
 
   for (const block of searchReplaceBlocks) {
-    const matchResult = flexibleMatch(result, block.search, block.replace);
-    if (matchResult) {
-      result = matchResult;
+    try {
+      const matchResult = flexibleMatch(result, block.search, block.replace);
+      if (matchResult) {
+        result = matchResult;
+      }
+    } catch (error) {
+      console.error(error);
+      continue;
     }
   }
 

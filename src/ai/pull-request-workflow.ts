@@ -382,8 +382,6 @@ async function generateAIResponseForPR(
     },
   );
 
-  console.log(chalk.cyan('\nPR Review Prompt:'));
-  console.log(prReviewPrompt);
   return generateAIResponse(
     prReviewPrompt,
     {
