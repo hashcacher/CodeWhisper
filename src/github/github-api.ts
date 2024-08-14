@@ -200,14 +200,14 @@ export class GitHubAPI {
       const lastAIRevision = comments.findLast((comment) =>
         comment?.body?.includes('CodeWhisper commit information'),
       );
-      const lastAIRevisionDate = new Date(lastAIRevision?.created_at || pr.created_at);
+      const lastAIRevisionDate = new Date(
+        lastAIRevision?.created_at || pr.created_at,
+      );
       const commentsSinceLastAIRevision = comments.filter(
-        (comment) =>
-          new Date(comment.created_at) > lastAIRevisionDate,
+        (comment) => new Date(comment.created_at) > lastAIRevisionDate,
       );
       const reviewCommentsSinceLastAIRevision = reviewComments.filter(
-        (comment) =>
-          new Date(comment.updated_at) > lastAIRevisionDate,
+        (comment) => new Date(comment.updated_at) > lastAIRevisionDate,
       );
 
       return {
@@ -219,21 +219,22 @@ export class GitHubAPI {
           body: comment.body || '',
           created_at: comment.created_at,
         })),
-        reviewComments: reviewCommentsSinceLastAIRevision.map((reviewComment) => ({
-          user: reviewComment.user?.login || 'unknown',
-          body: reviewComment.body || '',
-          updated_at: reviewComment.updated_at,
-          commentContext: reviewComment.diff_hunk,
-          line: reviewComment.line,
-          path: reviewComment.path,
-        })),
+        reviewComments: reviewCommentsSinceLastAIRevision.map(
+          (reviewComment) => ({
+            user: reviewComment.user?.login || 'unknown',
+            body: reviewComment.body || '',
+            updated_at: reviewComment.updated_at,
+            commentContext: reviewComment.diff_hunk,
+            line: reviewComment.line,
+            path: reviewComment.path,
+          }),
+        ),
       };
     } catch (error) {
       console.error('Error fetching pull request details:', error);
       throw new Error('Failed to fetch pull request details');
     }
   }
-
 
   async addCommentToIssue(
     owner: string,
@@ -344,7 +345,7 @@ You can reply to CodeWhisper with instructions such as:
         base: baseBranch,
         body,
       });
-      
+
       // Add the CodeWhisper label to the PR
       await this.octokit.issues.addLabels({
         owner,
@@ -418,7 +419,7 @@ You can reply to CodeWhisper with instructions such as:
       });
 
       if (item.pull_request) {
-        const {data: reviewComments} =
+        const { data: reviewComments } =
           await this.octokit.pulls.listReviewComments({
             owner,
             repo,
@@ -485,7 +486,7 @@ You can reply to CodeWhisper with instructions such as:
       console.log(
         `Successfully created and pushed branch ${branchName} based on ${baseBranch}`,
       );
-      
+
       return newBranchName;
     } catch (error) {
       console.error('Error creating/updating branch:', error);

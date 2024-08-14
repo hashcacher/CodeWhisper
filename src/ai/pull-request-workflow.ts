@@ -27,7 +27,11 @@ import {
   handleDryRun,
   selectFiles,
 } from './task-workflow';
-import { checkoutBranch, commitAllChanges, revertLastCommit } from '../utils/git-tools';
+import {
+  checkoutBranch,
+  commitAllChanges,
+  revertLastCommit,
+} from '../utils/git-tools';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -41,7 +45,11 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       return;
     }
 
-    await processItem(context, { ...prInfo, pull_request: { url: prInfo.html_url } }, spinner);
+    await processItem(
+      context,
+      { ...prInfo, pull_request: { url: prInfo.html_url } },
+      spinner,
+    );
 
     console.log(chalk.green('Pull request workflow completed'));
   } catch (error) {
@@ -50,7 +58,9 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   }
 }
 
-async function initializeSharedContext(options: AiAssistedTaskOptions): Promise<SharedContext> {
+async function initializeSharedContext(
+  options: AiAssistedTaskOptions,
+): Promise<SharedContext> {
   const basePath = path.resolve(options.path ?? '.');
   const githubAPI = new GitHubAPI();
   const taskCache = new TaskCache(options.path || process.cwd());
@@ -73,7 +83,7 @@ async function initializeSharedContext(options: AiAssistedTaskOptions): Promise<
 async function getOrCreatePullRequest(
   context: SharedContext,
   branchName: string,
-  spinner: ora.Ora
+  spinner: ora.Ora,
 ) {
   const { owner, repo, githubAPI, taskCache, options } = context;
 
@@ -114,7 +124,7 @@ async function getOrCreatePullRequest(
 async function processItem(
   context: SharedContext,
   issue: LabeledItem,
-  spinner: ora.Ora
+  spinner: ora.Ora,
 ) {
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
@@ -125,7 +135,7 @@ async function processItem(
     details = await githubAPI.getIssueDetails(owner, repo, issue.number);
   }
 
-  if (!await needsAction(details)) {
+  if (!(await needsAction(details))) {
     return;
   }
 
@@ -135,9 +145,11 @@ async function processItem(
     basePath,
   );
 
-  const aiResponse = await generateAIResponse(
-    JSON.stringify(details),
+  const aiResponse = await generateAIResponseForIssue(
+    details,
+    selectedFiles,
     options,
+    basePath,
   );
 
   const parsedResponse = parseAICodegenResponse(
@@ -163,30 +175,38 @@ async function processItem(
     issue.number,
     selectedFiles,
     parsedResponse,
-    issue.pull_request !== undefined
+    issue.pull_request !== undefined,
   );
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
-  const spinner = ora({text: 'Starting continuous PR revision process...', discardStdin: false}).start();
+  const spinner = ora({
+    text: 'Starting continuous PR revision process...',
+    discardStdin: false,
+  }).start();
   const context = await initializeSharedContext(options);
 
   async function revisionLoop() {
     try {
       spinner.text = 'Fetching CodeWhisper labeled items...';
-      const labeledItems = await context.githubAPI.getCodeWhisperLabeledItems(context.owner, context.repo);
+      const labeledItems = await context.githubAPI.getCodeWhisperLabeledItems(
+        context.owner,
+        context.repo,
+      );
 
       for (const item of labeledItems) {
         await processItem(context, item, spinner);
       }
 
-      spinner.succeed('Iteration completed. Waiting a minute before next iteration...');
+      spinner.succeed(
+        'Iteration completed. Waiting a minute before next iteration...',
+      );
     } catch (error) {
       spinner.fail('Error in pull request revision iteration');
       console.error(chalk.red('Error:'), error);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1 * 60 * 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1 * 60 * 1000));
     spinner.start('Starting next iteration...');
     await revisionLoop();
   }
@@ -194,7 +214,11 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
   await revisionLoop();
 }
 
-async function handleRevert(context: SharedContext, pr: LabeledItem, prDetails: PullRequestDetails) {
+async function handleRevert(
+  context: SharedContext,
+  pr: LabeledItem,
+  prDetails: PullRequestDetails,
+) {
   const { owner, repo, basePath, githubAPI } = context;
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
@@ -204,7 +228,7 @@ async function handleRevert(context: SharedContext, pr: LabeledItem, prDetails: 
       owner,
       repo,
       pr.number,
-      'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.'
+      'Successfully reverted the last commit as requested. Please review the changes and let me know if you need any further modifications.',
     );
     console.log(chalk.green('Successfully reverted last commit.'));
   } catch (error) {
@@ -213,7 +237,7 @@ async function handleRevert(context: SharedContext, pr: LabeledItem, prDetails: 
       owner,
       repo,
       pr.number,
-      'An error occurred while attempting to revert the last commit. Please check the repository state and try again.'
+      'An error occurred while attempting to revert the last commit. Please check the repository state and try again.',
     );
     throw error;
   }
@@ -228,7 +252,50 @@ async function needsAction(prDetails: PullRequestDetails) {
   return !lastComment.body.startsWith('AI-generated changes have been applied');
 }
 
-async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTaskOptions): Promise<boolean> {
+async function generateAIResponseForIssue(
+  issue: GitHubIssue,
+  selectedFiles: string[],
+  options: AiAssistedTaskOptions,
+  basePath: string,
+): Promise<string> {
+  const modelConfig = getModelConfig(options.model);
+  const templatePath = getTemplatePath('issue-implementation-prompt');
+  const templateContent = await fs.readFile(templatePath, 'utf-8');
+
+  const customData = {
+    var_issue: JSON.stringify(issue),
+  };
+
+  const processedFiles = await processFiles(options, selectedFiles);
+
+  const issueImplementationPrompt = await generateMarkdown(
+    processedFiles,
+    templateContent,
+    {
+      customData,
+      noCodeblock: options.noCodeblock,
+      lineNumbers: options.lineNumbers,
+    },
+  );
+
+  console.log(chalk.cyan('Generating AI response for issue implementation:'));
+  return generateAIResponse(
+    issueImplementationPrompt,
+    {
+      maxCostThreshold: options.maxCostThreshold,
+      model: options.model,
+      contextWindow: options.contextWindow,
+      maxTokens: options.maxTokens,
+      logAiInteractions: options.logAiInteractions,
+    },
+    modelConfig.temperature?.planningTemperature,
+  );
+}
+
+async function needsRevert(
+  prDetails: PullRequestDetails,
+  options: AiAssistedTaskOptions,
+): Promise<boolean> {
   const lastComment = prDetails.comments[prDetails.comments.length - 1];
   const aiPrompt = `
     Analyze the following comment and determine if the user is requesting to revert the last commit:
@@ -236,13 +303,13 @@ async function needsRevert(prDetails: PullRequestDetails, options: AiAssistedTas
     Respond with 'true' if the user wants to revert, or 'false' otherwise.
   `;
 
-   const generateOptions = {
-      maxCostThreshold: options.maxCostThreshold,
-      model: options.model,
-      maxTokens: 10,
-      logAiInteractions: options.logAiInteractions,
-    }
-  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3,);
-    
+  const generateOptions = {
+    maxCostThreshold: options.maxCostThreshold,
+    model: options.model,
+    maxTokens: 10,
+    logAiInteractions: options.logAiInteractions,
+  };
+  const aiResponse = await generateAIResponse(aiPrompt, generateOptions, 0.3);
+
   return aiResponse.trim().toLowerCase() === 'true';
 }
