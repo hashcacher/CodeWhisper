@@ -4,7 +4,7 @@ import type {
   GitHubIssue,
   PullRequestDetails,
   PullRequestInfo,
-  LabeledItem,
+  Issue,
 } from '../types';
 import {
   ensureValidBranchName,
@@ -368,7 +368,7 @@ You can reply to CodeWhisper with instructions such as:
   async getCodeWhisperLabeledItems(
     owner: string,
     repo: string,
-  ): Promise<LabeledItem[]> {
+  ): Promise<Issue[]> {
     try {
       const issues = await this.octokit.paginate(
         this.octokit.issues.listForRepo,
@@ -409,7 +409,7 @@ You can reply to CodeWhisper with instructions such as:
   async getLastComment(
     owner: string,
     repo: string,
-    item: LabeledItem,
+    item: Issue,
   ): Promise<string> {
     try {
       const { data: comments } = await this.octokit.issues.listComments({

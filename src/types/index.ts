@@ -1,9 +1,3 @@
-export interface GitHubIssue {
-  number: number;
-  title: string;
-  body: string | null;
-  html_url: string;
-}
 
 export interface MarkdownOptions {
   template?: string;
@@ -58,7 +52,7 @@ export type AiAssistedTaskOptions = Pick<
   contextWindow?: number;
   maxTokens?: number;
   logAiInteractions?: boolean;
-  githubIssue?: GitHubIssue;
+  githubIssue?: Issue;
   githubIssueFilters?: string;
   issueNumber?: number;
   diff?: boolean;
@@ -165,29 +159,20 @@ export interface TaskData {
   instructions: string;
   timestamp: number;
   model: string;
-  prInfo?: PullRequestInfo;
+  prInfo?: Issue;
 }
 
-export interface LabeledItem {
+export interface Issue {
   number: number;
   title: string;
   body: string | null;
   html_url: string;
   pull_request?: { url: string };
-}
-
-export interface PullRequestInfo extends LabeledItem {}
-
-export interface PullRequestDetails {
-  number: number;
-  title: string;
-  body: string;
   head: {
     ref: string;
   };
-  html_url: string;
-  comments: Comment[];
-  review_comments: Comment[];
+  comments?: Comment[];
+  review_comments?: Comment[];
 }
 
 export interface Comment {

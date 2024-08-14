@@ -9,9 +9,7 @@ import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
 import type {
   AiAssistedTaskOptions,
-  PullRequestDetails,
-  LabeledItem,
-  GitHubIssue,
+  Issue,
   AIParsedResponse,
   PRWorkflowContext,
 } from '../types';
@@ -52,7 +50,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
     );
 
     if (await needsRevert(prInfo, options)) {
-      await handleRevert(context, prInfo, prInfo);
+      await handleRevert(context, prInfo);
     }
 
     console.log(chalk.green('Pull request workflow completed'));
@@ -127,12 +125,12 @@ async function getOrCreatePullRequest(
 
 async function processIssue(
   context: PRWorkflowContext,
-  issue: LabeledItem,
+  issue: Issue,
   spinner: ora.Ora,
 ) {
   const {owner, repo, basePath, githubAPI, taskCache, options} = context;
 
-  let details: PullRequestDetails | GitHubIssue;
+  let details: Issue;
   if (issue.pull_request) {
     details = await githubAPI.getPullRequestDetails(owner, repo, issue.number);
   } else {
@@ -230,14 +228,13 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
 async function handleRevert(
   context: PRWorkflowContext,
-  pr: LabeledItem,
-  prDetails: PullRequestDetails,
+  pr: Issue,
 ) {
   const { owner, repo, basePath, githubAPI } = context;
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
     await revertLastCommit(basePath);
-    await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
+    await githubAPI.pushChanges(owner, repo, pr.head.ref);
     await githubAPI.addCustomCommentToPR(
       owner,
       repo,
@@ -257,17 +254,17 @@ async function handleRevert(
   }
 }
 
-async function needsAction(prDetails: PullRequestDetails) {
-  if (!prDetails.comments || prDetails.comments.length === 0) {
+async function needsAction(pr: Issue) {
+  if (!pr.comments || pr.comments.length === 0) {
     return true;
   }
 
-  const lastComment = prDetails.comments[prDetails.comments?.length - 1];
+  const lastComment = pr.comments[pr.comments?.length - 1];
   return !lastComment.body.startsWith('AI-generated changes have been applied');
 }
 
 async function generateAIResponseForIssue(
-  issue: GitHubIssue,
+  issue: Issue,
   selectedFiles: string[],
   options: AiAssistedTaskOptions,
   basePath: string,
@@ -307,10 +304,13 @@ async function generateAIResponseForIssue(
 }
 
 async function needsRevert(
-  prDetails: PullRequestDetails,
+  pr: Issue,
   options: AiAssistedTaskOptions,
 ): Promise<boolean> {
-  const lastComment = prDetails.comments[prDetails.comments.length - 1];
+  if (!pr.comments || pr.comments.length === 0) {
+    return false;
+  }
+  const lastComment = pr.comments[pr.comments.length - 1];
   const aiPrompt = `
     Analyze the following comment and determine if the user is requesting to revert the last commit:
     "${lastComment.body}"
