@@ -353,10 +353,11 @@ async function generateAIResponseForIssue(
 }
 
 async function needsAction(prDetails: PullRequestDetails) {
-  const lastComment = prDetails.comments[prDetails.comments.length - 1];
-  if (!lastComment) {
+  if (!prDetails.comments || prDetails.comments.length === 0) {
     return true;
   }
+
+  const lastComment = prDetails.comments[prDetails.comments?.length - 1];
   return !lastComment.body.startsWith('AI-generated changes have been applied');
 }
 
