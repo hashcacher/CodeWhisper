@@ -36,7 +36,7 @@ import {
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
-    const context = await initializePRWorkflowContext(options);
+    const context = await initializeContext(options);
     const branchName = await context.taskCache.getCurrentBranch();
     const prInfo = await getOrCreatePullRequest(context, branchName, spinner);
 
@@ -62,7 +62,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   }
 }
 
-async function initializePRWorkflowContext(
+async function initializeContext(
   options: AiAssistedTaskOptions,
 ): Promise<PRWorkflowContext> {
   const basePath = path.resolve(options.path ?? '.');
@@ -198,7 +198,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
     text: 'Starting continuous PR revision process...',
     discardStdin: false,
   }).start();
-  const context = await initializeSharedContext(options);
+  const context = await initializeContext(options);
 
   async function revisionLoop() {
     try {
