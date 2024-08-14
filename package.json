@@ -85,6 +85,7 @@
     "release": "semantic-release",
     "fixPermissions": "chmod +x ./dist/cli.js",
     "dev": "NODE_ENV=development esno src/cli/index.ts",
+    "debug": "NODE_ENV=development esno --inspect-brk src/cli/index.ts",
     "start": "node dist/cli/index.js",
     "test": "vitest",
     "test:ui": "vitest --ui",

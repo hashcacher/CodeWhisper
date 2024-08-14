@@ -125,7 +125,7 @@ async function processItem(
     details = await githubAPI.getIssueDetails(owner, repo, item.number);
   }
 
-  if (!needsAction(details)) {
+  if (!await needsAction(details)) {
     return;
   }
 
