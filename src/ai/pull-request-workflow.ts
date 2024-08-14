@@ -278,13 +278,7 @@ async function revisePullRequest(
   await applyChanges({ basePath, parsedResponse, dryRun: false });
   const commitMessage = `CodeWhisper: ${parsedResponse.gitCommitMessage}`;
   await commitAllChanges(basePath, commitMessage);
-  await githubAPI.createCommitOnPR(
-    owner,
-    repo,
-    pr.number,
-    'CodeWhisper: Automated PR revision',
-    parsedResponse,
-  );
+  await githubAPI.pushChanges(owner, repo, prDetails.head.ref);
   await githubAPI.addCommentToPR(owner, repo, pr.number, selectedFiles, parsedResponse);
 }
 

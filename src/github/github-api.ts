@@ -460,78 +460,6 @@ You can reply to CodeWhisper with instructions such as:
     }
   }
 
-  async createCommitOnPR(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    commitMessage: string,
-    changes: AIParsedResponse,
-  ): Promise<void> {
-    try {
-      // Get the PR details
-      const { data: pr } = await this.octokit.pulls.get({
-        owner,
-        repo,
-        pull_number: prNumber,
-      });
-
-      await this.createCommitOnBranch(
-        owner,
-        repo,
-        pr.head.ref,
-        commitMessage,
-        changes,
-      );
-
-      console.log(`Successfully created commit on PR #${prNumber}`);
-    } catch (error) {
-      console.error('Error creating commit on PR:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to create commit on PR: ${error.message}`);
-      } else {
-        throw new Error('Failed to create commit on PR: Unknown error');
-      }
-    }
-  }
-
-  async createCommitOnBranch(
-    owner: string,
-    repo: string,
-    branchName: string,
-    commitMessage: string,
-    changes: AIParsedResponse,
-  ): Promise<void> {
-    try {
-      const repoInfo = await getGitHubRepoInfo('.');
-      if (!repoInfo) {
-        throw new Error('Unable to get GitHub repository information');
-      }
-
-      const git: SimpleGit = simpleGit('.');
-      await ensureBranch('.', branchName);
-
-      // Apply changes to files
-      for (const file of changes.files) {
-        await git.add(file.path);
-      }
-
-      // Create commit
-      await createBranchAndCommit('.', branchName, commitMessage);
-
-      // Push changes to remote
-      await git.push('origin', branchName);
-
-      console.log(`Successfully created commit on branch ${branchName}`);
-    } catch (error) {
-      console.error('Error creating commit on branch:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to create commit on branch: ${error.message}`);
-      } else {
-        throw new Error('Failed to create commit on branch: Unknown error');
-      }
-    }
-  }
-
   async getDefaultBranch(owner: string, repo: string): Promise<string> {
     try {
       const { data: repository } = await this.octokit.repos.get({
@@ -582,39 +510,6 @@ You can reply to CodeWhisper with instructions such as:
         throw new Error(`Failed to create/update branch: ${error.message}`);
       } else {
         throw new Error('Failed to create/update branch: Unknown error');
-      }
-    }
-  }
-
-  async createCommitOnPR(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    commitMessage: string,
-    changes: AIParsedResponse,
-  ): Promise<void> {
-    try {
-      const { data: pr } = await this.octokit.pulls.get({
-        owner,
-        repo,
-        pull_number: prNumber,
-      });
-
-      await this.createCommitOnBranch(
-        owner,
-        repo,
-        pr.head.ref,
-        commitMessage,
-        changes,
-      );
-
-      console.log(`Successfully created commit on PR #${prNumber}`);
-    } catch (error) {
-      console.error('Error creating commit on PR:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to create commit on PR: ${error.message}`);
-      } else {
-        throw new Error('Failed to create commit on PR: Unknown error');
       }
     }
   }
