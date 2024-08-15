@@ -1,29 +1,18 @@
 import path from 'node:path';
-import { input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
-import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
-import type {
-  AiAssistedTaskOptions,
-  Issue,
-  PRWorkflowContext,
-} from '../types';
+import type { AiAssistedTaskOptions, Issue, PRWorkflowContext } from '../types';
+import { revertLastCommit } from '../utils/git-tools';
 import { TaskCache } from '../utils/task-cache';
 import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForIssue } from './select-files';
-import {
-  applyCodeModifications,
-  handleDryRun,
-} from './task-workflow';
-import {
-  revertLastCommit,
-} from '../utils/git-tools';
+import { applyCodeModifications, handleDryRun } from './task-workflow';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -92,21 +81,14 @@ async function getOrCreatePullRequest(
 
   if (!prInfo) {
     spinner.text = 'Creating new pull request...';
-    const title = await input({ message: 'Enter pull request title:' });
-    let body = await input({ message: 'Enter pull request description:' });
-
-    const issueNumber = extractIssueNumberFromBranch(branchName);
-    if (issueNumber) {
-      body = `Closes #${issueNumber}\n\n${body}`;
-    }
-
     spinner.start('Creating new pull request...');
     prInfo = await githubAPI.createPullRequest(
       owner,
       repo,
+      0,
       branchName,
-      title,
-      body,
+      'Implement issue',
+      'AI-generated implementation',
     );
     await taskCache.setPRInfo(prInfo);
     spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
@@ -122,7 +104,7 @@ async function processIssue(
   issue: Issue,
   spinner: ora.Ora,
 ) {
-  const {owner, repo, basePath, githubAPI, options} = context;
+  const { owner, repo, basePath, githubAPI, options } = context;
 
   let details: Issue;
   if (issue.pull_request) {
@@ -137,7 +119,7 @@ async function processIssue(
 
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(details),
-    {...options, respectGitignore: true, diff: true},
+    { ...options, respectGitignore: true, diff: true },
     basePath,
   );
 
@@ -155,15 +137,15 @@ async function processIssue(
   );
 
   if (options.dryRun) {
-    await handleDryRun(
-      basePath,
-      parsedResponse,
-      '',
-    );
+    await handleDryRun(basePath, parsedResponse, '');
 
     return;
   }
-  const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse);
+  const branchName = await applyCodeModifications(
+    { ...options, autoCommit: true },
+    basePath,
+    parsedResponse,
+  );
   await githubAPI.pushChanges(owner, repo, branchName);
 
   if (issue.pull_request) {
@@ -173,7 +155,6 @@ async function processIssue(
       issue.number,
       selectedFiles,
       parsedResponse,
-      issue.pull_request !== undefined,
     );
   } else {
     await githubAPI.createPullRequest(
@@ -183,7 +164,6 @@ async function processIssue(
       branchName,
       issue.title,
       issue.body,
-      parsedResponse,
     );
   }
 }
@@ -223,10 +203,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
   await revisionLoop();
 }
 
-async function handleRevert(
-  context: PRWorkflowContext,
-  pr: Issue,
-) {
+async function handleRevert(context: PRWorkflowContext, pr: Issue) {
   const { owner, repo, basePath, githubAPI } = context;
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
