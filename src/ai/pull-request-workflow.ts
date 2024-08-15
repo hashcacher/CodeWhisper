@@ -147,16 +147,16 @@ async function processIssue(
 
   await taskCache.addRevisionAttempt(attemptKey, { timestamp: Date.now() });
 
+  // Check out and pull the branch to ensure we have the latest changes
+  if (pullRequest) {
+    await checkoutBranch(basePath, issue.head.ref);
+  }
+
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(issue),
     { ...options, respectGitignore: true, diff: true },
     basePath,
   );
-
-  // Check out and pull the branch to ensure we have the latest changes
-  if (pullRequest) {
-    await checkoutBranch(basePath, issue.head.ref);
-  }
 
   const aiResponse = await generateAIResponseForIssue(
     issue,
@@ -188,7 +188,7 @@ async function processIssue(
   );
   await githubAPI.pushChanges(owner, repo, branchName);
 
-  if (!pull_request) {
+  if (!pullRequest) {
     issue.number = await githubAPI.createPullRequest(
       owner,
       repo,
