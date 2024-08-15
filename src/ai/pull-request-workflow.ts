@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { confirm, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
@@ -10,7 +10,6 @@ import { GitHubAPI } from '../github/github-api';
 import type {
   AiAssistedTaskOptions,
   Issue,
-  AIParsedResponse,
   PRWorkflowContext,
 } from '../types';
 import { TaskCache } from '../utils/task-cache';
@@ -18,16 +17,12 @@ import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
-import { selectFilesForIssue as selectFilesForIssue } from './select-files';
-import { applyChanges } from './apply-changes';
+import { selectFilesForIssue } from './select-files';
 import {
   applyCodeModifications,
   handleDryRun,
-  selectFiles,
 } from './task-workflow';
 import {
-  checkoutBranch,
-  commitAllChanges,
   revertLastCommit,
 } from '../utils/git-tools';
 
@@ -170,7 +165,7 @@ async function processIssue(
     );
 
     return;
-  } 
+  }
   const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse);
   await githubAPI.pushChanges(owner, repo, branchName);
 
@@ -181,7 +176,7 @@ async function processIssue(
       issue.number,
       selectedFiles,
       parsedResponse,
-      issue.pull_request !== undefined,
+      true,
     );
   } else {
     await githubAPI.createPullRequest(
