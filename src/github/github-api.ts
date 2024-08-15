@@ -6,7 +6,7 @@ import type {
   PullRequestInfo,
   LabeledItem,
 } from '../types';
-import { generateKittenAsciiArt } from '../utils/ascii-art';
+import { getRandomKittenAsciiArt } from '../utils/ascii-art';
 import { ensureValidBranchName, ensureBranch, createBranchAndCommit, getGitHubRepoInfo, findOriginalBranch } from '../utils/git-tools';
 import simpleGit, { SimpleGit } from 'simple-git';
 
@@ -239,7 +239,7 @@ export class GitHubAPI {
     selectedFiles: string[],
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
-    const kittenArt = generateKittenAsciiArt();
+    const kittenArt = getRandomKittenAsciiArt();
     const comment = `
 ${kittenArt}
 
@@ -334,8 +334,8 @@ You can reply with instructions such as:
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);
 
-      const kittenArt = generateKittenAsciiArt();
-      const bodyWithKitten = `${kittenArt}\n\n${body}`;
+      const kittenArt = getRandomKittenAsciiArt();
+      const bodyWithKitten = `${kittenArt}\n\nCodeWhisper: Automated PR with Kitten Art 🐱\n\n${body}`;
 
       const { data: pullRequest } = await this.octokit.pulls.create({
         owner,
