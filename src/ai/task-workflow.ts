@@ -559,15 +559,19 @@ export async function applyCodeModifications(
   options: AiAssistedTaskOptions,
   basePath: string,
   parsedResponse: AIParsedResponse,
+  createNewBranch = true,
 ) {
   const spinner = ora('Applying AI Code Modifications...').start();
 
   try {
-    const actualBranchName = await ensureBranch(
-      basePath,
-      parsedResponse.gitBranchName,
-      { issueNumber: options.issueNumber },
-    );
+    let branchName = parsedResponse.gitBranchName;
+    if (createNewBranch) {
+      branchName = await ensureBranch(
+        basePath,
+        parsedResponse.gitBranchName,
+        { issueNumber: options.issueNumber },
+      );
+    }
     await applyChanges({ basePath, parsedResponse, dryRun: false });
 
     if (options.autoCommit) {
