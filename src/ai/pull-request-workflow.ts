@@ -46,7 +46,8 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
 
     await processIssue(
       context,
-      { ...pr, pull_request: { url: pr.html_url } },
+      pr.number,
+      !!pr.html_url,
       spinner,
     );
 
@@ -119,40 +120,41 @@ async function getOrCreatePullRequest(
 
 async function processIssue(
   context: PRWorkflowContext,
-  issue: Issue,
+  number: number,
+  pullRequest: boolean,
   spinner: ora.Ora,
 ) {
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
-  let details: Issue;
-  if (issue.pull_request) {
-    details = await githubAPI.getPullRequestDetails(owner, repo, issue.number);
+  let issue: Issue;
+  if (pullRequest) {
+    issue = await githubAPI.getPullRequestDetails(owner, repo, number);
   } else {
-    details = await githubAPI.getIssueDetails(owner, repo, issue.number);
+    issue = await githubAPI.getIssueDetails(owner, repo, number);
   }
 
-  if (!(await needsAction(details))) {
+  if (!(await needsAction(issue))) {
     return;
   }
 
-  const attemptKey = `${owner}/${repo}/${issue.number}`;
+  const attemptKey = `${owner}/${repo}/${number}`;
   const attempts = await taskCache.getRevisionAttempts(attemptKey);
 
   if (attempts.length >= 3 && Date.now() - attempts[attempts.length - 3].timestamp < 3600000) {
-    spinner.info(`Skipping issue/PR #${issue.number}: Rate limit exceeded (3 attempts per hour)`);
+    spinner.info(`Skipping issue/PR #${number}: Rate limit exceeded (3 attempts per hour)`);
     return;
   }
 
   await taskCache.addRevisionAttempt(attemptKey, { timestamp: Date.now() });
 
   const selectedFiles = await selectFilesForIssue(
-    JSON.stringify(details),
+    JSON.stringify(issue),
     { ...options, respectGitignore: true, diff: true },
     basePath,
   );
 
   const aiResponse = await generateAIResponseForIssue(
-    details,
+    issue,
     selectedFiles,
     options,
     basePath,
@@ -177,15 +179,15 @@ async function processIssue(
     { ...options, autoCommit: true },
     basePath,
     parsedResponse,
-    issue.pull_request ? issue.head.ref : undefined,
+    pull_request ? issue.head.ref : undefined,
   );
   await githubAPI.pushChanges(owner, repo, branchName);
 
-  if (!issue.pull_request) {
-    issue.number = await githubAPI.createPullRequest(
+  if (!pull_request) {
+    number = await githubAPI.createPullRequest(
       owner,
       repo,
-      issue.number,
+      number,
       branchName,
       issue.title,
       issue.body,
@@ -195,10 +197,10 @@ async function processIssue(
   await githubAPI.addCommentToIssue(
     owner,
     repo,
-    issue.number,
+    number,
     selectedFiles,
     parsedResponse,
-    issue.pull_request !== undefined,
+    pullRequest,
   );
 }
 
@@ -218,7 +220,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       );
 
       for (const issue of labeledIssues) {
-        await processIssue(context, issue, spinner);
+        await processIssue(context, issue.number, spinner);
       }
 
       spinner.succeed(
