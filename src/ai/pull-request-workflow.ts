@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import fs from 'fs-extra';
 import ora from 'ora';
 import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
@@ -123,7 +122,7 @@ async function processIssue(
   issue: Issue,
   spinner: ora.Ora,
 ) {
-  const {owner, repo, basePath, githubAPI, taskCache, options} = context;
+  const {owner, repo, basePath, githubAPI, options} = context;
 
   let details: Issue;
   if (issue.pull_request) {
@@ -159,11 +158,11 @@ async function processIssue(
     await handleDryRun(
       basePath,
       parsedResponse,
-      taskCache.getLastTaskData(basePath)?.taskDescription || '',
+      '',
     );
 
     return;
-  } 
+  }
   const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse);
   await githubAPI.pushChanges(owner, repo, branchName);
 
