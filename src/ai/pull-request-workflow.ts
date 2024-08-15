@@ -135,7 +135,7 @@ async function processIssue(
   const attemptKey = `${owner}/${repo}/${number}`;
   const attempts = await taskCache.getRevisionAttempts(attemptKey);
 
-  const maxRetries = 6;
+  const maxRetries = 7;
   if (
     attempts.length >= maxRetries &&
     Date.now() - attempts[attempts.length - maxRetries].timestamp < 3600000
@@ -188,7 +188,7 @@ async function processIssue(
     parsedResponse,
     pullRequest ? issue.head.ref : undefined,
   );
-  await githubAPI.pushChanges(owner, repo, branchName);
+  await githubAPI.pushChanges(basePath, owner, repo, branchName);
 
   if (!pullRequest) {
     issue.number = await githubAPI.createPullRequest(
@@ -256,7 +256,7 @@ async function handleRevert(context: PRWorkflowContext, pr: Issue) {
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
     await revertLastCommit(basePath);
-    await githubAPI.pushChanges(owner, repo, pr.head.ref);
+    await githubAPI.pushChanges(basePath, owner, repo, pr.head.ref);
     await githubAPI.addCustomCommentToPR(
       owner,
       repo,

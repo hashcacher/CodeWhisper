@@ -462,13 +462,14 @@ You can reply with instructions such as:
   }
 
   async createBranch(
+    basePath: string,
     owner: string,
     repo: string,
     branchName: string,
     baseBranch: string,
   ): Promise<string> {
     try {
-      const git: SimpleGit = simpleGit('.');
+      const git: SimpleGit = simpleGit(basePath);
 
       // Fetch the latest changes from the remote
       await git.fetch('origin');
@@ -498,12 +499,13 @@ You can reply with instructions such as:
   }
 
   async pushChanges(
+    basePath: string,
     owner: string,
     repo: string,
     branchName: string,
   ): Promise<void> {
     try {
-      const git: SimpleGit = simpleGit('.');
+      const git: SimpleGit = simpleGit(basePath);
       await git.push('origin', branchName);
       console.log(`Successfully pushed changes to ${branchName}`);
     } catch (error) {
