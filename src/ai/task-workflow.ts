@@ -580,11 +580,11 @@ export async function applyCodeModifications(
         : parsedResponse.gitCommitMessage;
       commitAllChanges(basePath, commitMessage);
       spinner.succeed(
-        `AI Code Modifications applied and committed to branch: ${actualBranchName}`,
+        `AI Code Modifications applied and committed to branch: ${branchName}`,
       );
     } else {
       spinner.succeed(
-        `AI Code Modifications applied to branch: ${actualBranchName}`,
+        `AI Code Modifications applied to branch: ${branchName}`,
       );
       console.log(chalk.green('Changes have been applied but not committed.'));
       console.log(
@@ -602,7 +602,7 @@ export async function applyCodeModifications(
         ),
       );
     }
-    return actualBranchName;
+    return branchName;
   } catch (error) {
     spinner.fail('Error applying AI Code Modifications');
     console.error(

@@ -173,6 +173,11 @@ export interface Issue {
   };
   comments?: Comment[];
   review_comments?: Comment[];
+  state?: string;
+  labels?: Array<{ name: string }>;
+  assignees?: Array<{ login: string }>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Comment {
