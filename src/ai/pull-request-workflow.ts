@@ -108,7 +108,7 @@ async function getOrCreatePullRequest(
       body = `Closes #${issueNumber}\n\n${body}`;
     }
 
-    await processIssue(context, pr, spinner);
+    await processIssue(context, issueNumber, !!pr.pull_request, spinner);
     // await taskCache.setPRInfo(pr);
     spinner.succeed(`Created new pull request: ${pr.html_url}`);
   } else {
@@ -220,7 +220,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       );
 
       for (const issue of labeledIssues) {
-        await processIssue(context, issue.number, spinner);
+        await processIssue(context, issue.number, !!issue.pull_request, spinner);
       }
 
       spinner.succeed(
