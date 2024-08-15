@@ -337,7 +337,10 @@ You can reply to CodeWhisper with instructions such as:
   ): Promise<PullRequestInfo> {
 
     const title = `Implement issue #${issueNumber}: ${issueTitle} [CodeWhisper]`
-    const body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\nIssue description:\n${issueBody}`
+    let body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\n`
+    if (issueBody) {
+      body += `Issue description:\n${issueBody}`;
+    }
     try {
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);

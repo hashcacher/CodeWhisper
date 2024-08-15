@@ -173,7 +173,7 @@ async function processIssue(
       issue.number,
       selectedFiles,
       parsedResponse,
-      issue.pull_request !== undefined,
+      true,
     );
   } else {
     await githubAPI.createPullRequest(
