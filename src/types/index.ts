@@ -193,6 +193,10 @@ export interface PRWorkflowContext {
   options: AiAssistedTaskOptions;
 }
 
+export interface RevisionAttempt {
+  timestamp: number;
+}
+
 export interface AIFileChange {
   search: string;
   replace: string;

@@ -23,6 +23,7 @@ import { getTemplatePath } from '../utils/template-utils';
 import { applyChanges } from './apply-changes';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
+import { RevisionAttempt } from '../types';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForIssue } from './select-files';
 import {
@@ -133,6 +134,16 @@ async function processIssue(
   if (!(await needsAction(details))) {
     return;
   }
+
+  const attemptKey = `${owner}/${repo}/${issue.number}`;
+  const attempts = await taskCache.getRevisionAttempts(attemptKey);
+
+  if (attempts.length >= 3 && Date.now() - attempts[attempts.length - 3].timestamp < 3600000) {
+    spinner.info(`Skipping issue/PR #${issue.number}: Rate limit exceeded (3 attempts per hour)`);
+    return;
+  }
+
+  await taskCache.addRevisionAttempt(attemptKey, { timestamp: Date.now() });
 
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(details),

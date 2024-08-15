@@ -2,11 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'fs-extra';
 import simpleGit from 'simple-git';
-import type { PullRequestInfo, TaskData } from '../types';
+import type { PullRequestInfo, TaskData, RevisionAttempt } from '../types';
 
 export class TaskCache {
   private cacheFile: string;
   private cache: Record<string, TaskData> = {};
+  private revisionAttempts: Record<string, RevisionAttempt[]> = {};
 
   constructor(projectPath: string) {
     const cacheDir = path.join(os.homedir(), '.codewhisper');
@@ -18,12 +19,17 @@ export class TaskCache {
 
   private loadCache(): void {
     if (fs.existsSync(this.cacheFile)) {
-      this.cache = fs.readJSONSync(this.cacheFile);
+      const loadedCache = fs.readJSONSync(this.cacheFile);
+      this.cache = loadedCache.taskData || {};
+      this.revisionAttempts = loadedCache.revisionAttempts || {};
     }
   }
 
   private saveCache(): void {
-    fs.writeJSONSync(this.cacheFile, this.cache);
+    fs.writeJSONSync(this.cacheFile, {
+      taskData: this.cache,
+      revisionAttempts: this.revisionAttempts,
+    });
   }
 
   setTaskData(
@@ -111,5 +117,17 @@ export class TaskCache {
     const branch = await this.getCurrentBranch();
     const key = `${owner}/${repo}/${branch}`;
     return this.cache[key]?.prInfo || null;
+  }
+
+  async getRevisionAttempts(key: string): Promise<RevisionAttempt[]> {
+    return this.revisionAttempts[key] || [];
+  }
+
+  async addRevisionAttempt(key: string, attempt: RevisionAttempt): Promise<void> {
+    if (!this.revisionAttempts[key]) {
+      this.revisionAttempts[key] = [];
+    }
+    this.revisionAttempts[key].push(attempt);
+    this.saveCache();
   }
 }
