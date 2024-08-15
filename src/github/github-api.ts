@@ -205,6 +205,7 @@ export class GitHubAPI {
       );
 
       return {
+        number: pr.number,
         title: pr.title,
         body: pr.body || '',
         head: pr.head,
