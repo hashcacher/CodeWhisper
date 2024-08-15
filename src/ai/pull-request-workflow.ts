@@ -177,7 +177,7 @@ async function processIssue(
     { ...options, autoCommit: true },
     basePath,
     parsedResponse,
-    !issue.pull_request,
+    issue.pull_request ? issue.head.ref : undefined,
   );
   await githubAPI.pushChanges(owner, repo, branchName);
 
