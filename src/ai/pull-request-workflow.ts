@@ -278,10 +278,10 @@ async function generateAIResponseForIssue(
   let templatePath;
   const customData = {};
   if (issue.pull_request) {
-    customData.var_issue: JSON.stringify(issue),
+    customData.var_issue: JSON.stringify(issue)
     templatePath = getTemplatePath('pr-diff-prompt')
   } else {
-    customData.var_pullRequest: JSON.stringify(issue),
+    customData.var_pullRequest: JSON.stringify(issue)
     templatePath = getTemplatePath('issue-implementation-prompt')
   }
 
