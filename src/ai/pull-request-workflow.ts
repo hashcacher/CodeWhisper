@@ -1,7 +1,6 @@
 import path from 'node:path';
-import { confirm, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import fs from 'fs-extra';
 import ora from 'ora';
 import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
@@ -18,16 +17,13 @@ import { getTemplatePath } from '../utils/template-utils';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
-import { selectFilesForIssue as selectFilesForIssue } from './select-files';
+import { selectFilesForIssue } from './select-files';
 import { applyChanges } from './apply-changes';
 import {
   applyCodeModifications,
   handleDryRun,
-  selectFiles,
 } from './task-workflow';
 import {
-  checkoutBranch,
-  commitAllChanges,
   revertLastCommit,
 } from '../utils/git-tools';
 
@@ -110,11 +106,10 @@ async function getOrCreatePullRequest(
     prInfo = await githubAPI.createPullRequest(
       owner,
       repo,
-      issue.number,
+      issueNumber,
       branchName,
-      issue.title,
-      issue.body,
-      parsedResponse,
+      title,
+      body,
     );
     await taskCache.setPRInfo(prInfo);
     spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
@@ -223,7 +218,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       console.error(chalk.red('Error:'), error);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1 * 60 * 1000));
+    await new Promise((resolve) => setTimeout(resolve, 60000));
     spinner.start('Starting next iteration...');
     await revisionLoop();
   }
@@ -276,7 +271,7 @@ async function generateAIResponseForIssue(
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
   let templatePath;
-  const customData = {};
+  const customData: Record<string, string> = {};
   if (issue.pull_request) {
     customData.var_pullRequest = JSON.stringify(issue);
     templatePath = getTemplatePath('pr-diff-prompt');
@@ -285,7 +280,7 @@ async function generateAIResponseForIssue(
     templatePath = getTemplatePath('issue-implementation-prompt');
   }
 
-  const templateContent = await fs.readFile(templatePath, 'utf-8');
+  const templateContent = await getTemplatePath(templatePath);
 
   const processedFiles = await processFiles(options, selectedFiles);
 
