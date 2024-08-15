@@ -177,12 +177,6 @@ export class GitHubAPI {
         pull_number: prNumber,
       });
 
-      const { data: files } = await this.octokit.pulls.listFiles({
-        owner,
-        repo,
-        pull_number: prNumber,
-      });
-
       const { data: comments } = await this.octokit.issues.listComments({
         owner,
         repo,
@@ -198,7 +192,7 @@ export class GitHubAPI {
 
       // Filter only comments that happened since the last AI generated revision
       const lastAIRevision = comments.findLast((comment) =>
-        comment?.body?.includes('CodeWhisper commit information'),
+        comment?.body?.startsWith('AI-generated'),
       );
       const lastAIRevisionDate = new Date(
         lastAIRevision?.created_at || pr.created_at,
@@ -243,8 +237,7 @@ export class GitHubAPI {
     selectedFiles: string[],
     parsedResponse: AIParsedResponse,
   ): Promise<void> {
-    const comment = `
-CodeWhisper commit information
+    const comment = `AI-generated commit information
 
 ## Summary
 ${parsedResponse.summary}
@@ -256,7 +249,7 @@ ${selectedFiles.map((file) => `- ${file}`).join('\n')}
 ${parsedResponse.potentialIssues}
 
 ## Next steps
-You can reply to CodeWhisper with instructions such as:
+You can reply with instructions such as:
 - "Revert the last commit"  
 - "Fix the typo in line 10"
 - "Add a new function to the file"
@@ -336,8 +329,11 @@ You can reply to CodeWhisper with instructions such as:
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
 
-    const title = `Implement issue #${issueNumber}: ${issueTitle} [CodeWhisper]`
-    const body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\nIssue description:\n${issueBody}`
+    const title = `Implement issue #${issueNumber}: ${issueTitle} [AI-generated]`
+    let body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\n`
+    if (issueBody) {
+      body += `Issue description:\n${issueBody}`;
+    }
     try {
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);

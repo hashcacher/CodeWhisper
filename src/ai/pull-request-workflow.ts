@@ -275,12 +275,17 @@ async function generateAIResponseForIssue(
   basePath: string,
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
-  const templatePath = getTemplatePath('issue-implementation-prompt');
-  const templateContent = await fs.readFile(templatePath, 'utf-8');
+  let templatePath;
+  const customData = {};
+  if (issue.pull_request) {
+    customData.var_issue: JSON.stringify(issue),
+    templatePath = getTemplatePath('pr-diff-prompt')
+  } else {
+    customData.var_pullRequest: JSON.stringify(issue),
+    templatePath = getTemplatePath('issue-implementation-prompt')
+  }
 
-  const customData = {
-    var_issue: JSON.stringify(issue),
-  };
+  const templateContent = await fs.readFile(templatePath, 'utf-8');
 
   const processedFiles = await processFiles(options, selectedFiles);
 
