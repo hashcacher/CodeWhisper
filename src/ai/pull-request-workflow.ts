@@ -110,9 +110,11 @@ async function getOrCreatePullRequest(
     prInfo = await githubAPI.createPullRequest(
       owner,
       repo,
+      issue.number,
       branchName,
-      title,
-      body,
+      issue.title,
+      issue.body,
+      parsedResponse,
     );
     await taskCache.setPRInfo(prInfo);
     spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
@@ -184,8 +186,10 @@ async function processIssue(
     await githubAPI.createPullRequest(
       owner,
       repo,
+      issue.number,
       branchName,
-      `Implement issue #${issue.number} [CodeWhisper]`,
+      issue.title,
+      issue.body,
       parsedResponse,
     );
   }
@@ -260,7 +264,7 @@ async function needsAction(pr: Issue) {
   }
 
   const lastComment = pr.comments[pr.comments?.length - 1];
-  return !lastComment.body.startsWith('AI-generated changes have been applied');
+  return !lastComment.body.startsWith('AI-generated');
 }
 
 async function generateAIResponseForIssue(

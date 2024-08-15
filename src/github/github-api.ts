@@ -328,11 +328,16 @@ You can reply to CodeWhisper with instructions such as:
   async createPullRequest(
     owner: string,
     repo: string,
+    issueNumber: number,
     branchName: string,
-    title: string,
-    body: string,
+    issueTitle: string,
+    issueBody: string,
+    parsedResponse: AIParsedResponse,
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
+
+    const title = `Implement issue #${issueNumber}: ${issueTitle} [CodeWhisper]`,
+    const body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\nIssue description:\n${issueBody}`,
     try {
       const validBranchName = ensureValidBranchName(branchName);
       await ensureBranch('.', validBranchName);
