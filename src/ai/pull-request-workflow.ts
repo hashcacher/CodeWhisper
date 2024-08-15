@@ -135,9 +135,10 @@ async function processIssue(
   const attemptKey = `${owner}/${repo}/${number}`;
   const attempts = await taskCache.getRevisionAttempts(attemptKey);
 
+  const maxRetries = 5;
   if (
-    attempts.length >= 3 &&
-    Date.now() - attempts[attempts.length - 3].timestamp < 3600000
+    attempts.length >= maxRetries &&
+    Date.now() - attempts[attempts.length - maxRetries].timestamp < 3600000
   ) {
     spinner.info(
       `Skipping issue/PR #${number}: Rate limit exceeded (3 attempts per hour)`,
