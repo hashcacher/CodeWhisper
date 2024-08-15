@@ -30,6 +30,7 @@ import {
   commitAllChanges,
   revertLastCommit,
 } from '../utils/git-tools';
+import chalk from 'chalk';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -212,7 +213,11 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       );
 
       for (const issue of labeledIssues) {
-        await processIssue(context, issue, spinner);
+        if (context.taskCache.canAttemptRevision(issue.number)) {
+          await processIssue(context, issue, spinner);
+        } else {
+          spinner.info(chalk.yellow(`Skipping issue/PR #${issue.number} due to rate limiting.`));
+        }
       }
 
       spinner.succeed(

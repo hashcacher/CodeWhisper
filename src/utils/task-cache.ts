@@ -7,6 +7,7 @@ import type { PullRequestInfo, TaskData } from '../types';
 export class TaskCache {
   private cacheFile: string;
   private cache: Record<string, TaskData> = {};
+  private attemptCache: Record<string, { count: number; lastAttempt: number }> = {};
 
   constructor(projectPath: string) {
     const cacheDir = path.join(os.homedir(), '.codewhisper');
@@ -18,12 +19,17 @@ export class TaskCache {
 
   private loadCache(): void {
     if (fs.existsSync(this.cacheFile)) {
-      this.cache = fs.readJSONSync(this.cacheFile);
+      const loadedCache = fs.readJSONSync(this.cacheFile);
+      this.cache = loadedCache.cache || {};
+      this.attemptCache = loadedCache.attemptCache || {};
     }
   }
 
   private saveCache(): void {
-    fs.writeJSONSync(this.cacheFile, this.cache);
+    fs.writeJSONSync(this.cacheFile, {
+      cache: this.cache,
+      attemptCache: this.attemptCache,
+    });
   }
 
   setTaskData(
@@ -111,5 +117,27 @@ export class TaskCache {
     const branch = await this.getCurrentBranch();
     const key = `${owner}/${repo}/${branch}`;
     return this.cache[key]?.prInfo || null;
+  }
+
+  canAttemptRevision(issueOrPrNumber: number): boolean {
+    const now = Date.now();
+    const key = `revision-${issueOrPrNumber}`;
+    const attempt = this.attemptCache[key] || { count: 0, lastAttempt: 0 };
+
+    if (now - attempt.lastAttempt > 60 * 60 * 1000) {
+      // Reset if more than an hour has passed
+      attempt.count = 0;
+      attempt.lastAttempt = now;
+    }
+
+    if (attempt.count < 3) {
+      attempt.count++;
+      attempt.lastAttempt = now;
+      this.attemptCache[key] = attempt;
+      this.saveCache();
+      return true;
+    }
+
+    return false;
   }
 }
