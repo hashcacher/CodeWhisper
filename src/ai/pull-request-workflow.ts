@@ -149,6 +149,7 @@ async function processIssue(
 
   // Check out and pull the branch to ensure we have the latest changes
   if (pullRequest) {
+    console.log('Checking out pull request branch:', issue.head.ref);
     await checkoutBranch(basePath, issue.head.ref);
   }
 
