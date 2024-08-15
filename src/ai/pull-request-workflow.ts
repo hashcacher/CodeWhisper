@@ -3,54 +3,54 @@ import { confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
-import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
 import type {
+  AIParsedResponse,
   AiAssistedTaskOptions,
   Issue,
-  AIParsedResponse,
   PRWorkflowContext,
 } from '../types';
-import { TaskCache } from '../utils/task-cache';
-import { getTemplatePath } from '../utils/template-utils';
-import { generateAIResponse } from './generate-ai-response';
-import { getModelConfig } from './model-config';
-import { parseAICodegenResponse } from './parse-ai-codegen-response';
-import { selectFilesForIssue as selectFilesForIssue } from './select-files';
-import { applyChanges } from './apply-changes';
-import {
-  applyCodeModifications,
-  handleDryRun,
-  selectFiles,
-} from './task-workflow';
+import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import {
   checkoutBranch,
   commitAllChanges,
   revertLastCommit,
 } from '../utils/git-tools';
+import { TaskCache } from '../utils/task-cache';
+import { getTemplatePath } from '../utils/template-utils';
+import { applyChanges } from './apply-changes';
+import { generateAIResponse } from './generate-ai-response';
+import { getModelConfig } from './model-config';
+import { parseAICodegenResponse } from './parse-ai-codegen-response';
+import { selectFilesForIssue } from './select-files';
+import {
+  applyCodeModifications,
+  handleDryRun,
+  selectFiles,
+} from './task-workflow';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
   try {
     const context = await initializeContext(options);
     const branchName = await context.taskCache.getCurrentBranch();
-    const prInfo = await getOrCreatePullRequest(context, branchName, spinner);
+    const pr = await getOrCreatePullRequest(context, branchName, spinner);
 
-    if (!prInfo) {
+    if (!pr) {
       spinner.info('No action needed for this pull request.');
       return;
     }
 
     await processIssue(
       context,
-      { ...prInfo, pull_request: { url: prInfo.html_url } },
+      { ...pr, pull_request: { url: pr.html_url } },
       spinner,
     );
 
-    if (await needsRevert(prInfo, options)) {
-      await handleRevert(context, prInfo);
+    if (await needsRevert(pr, options)) {
+      await handleRevert(context, pr);
     }
 
     console.log(chalk.green('Pull request workflow completed'));
@@ -89,14 +89,14 @@ async function getOrCreatePullRequest(
 ) {
   const { owner, repo, githubAPI, taskCache, options } = context;
 
-  let prInfo = await githubAPI.checkForExistingPR(
+  const pr = await githubAPI.checkForExistingPR(
     owner,
     repo,
     branchName,
     options.prNumber,
   );
 
-  if (!prInfo) {
+  if (!pr) {
     spinner.text = 'Creating new pull request...';
     const title = await input({ message: 'Enter pull request title:' });
     let body = await input({ message: 'Enter pull request description:' });
@@ -106,23 +106,14 @@ async function getOrCreatePullRequest(
       body = `Closes #${issueNumber}\n\n${body}`;
     }
 
-    spinner.start('Creating new pull request...');
-    prInfo = await githubAPI.createPullRequest(
-      owner,
-      repo,
-      issue.number,
-      branchName,
-      issue.title,
-      issue.body,
-      parsedResponse,
-    );
-    await taskCache.setPRInfo(prInfo);
-    spinner.succeed(`Created new pull request: ${prInfo.html_url}`);
+    await processIssue(context, pr, spinner);
+    // await taskCache.setPRInfo(pr);
+    spinner.succeed(`Created new pull request: ${pr.html_url}`);
   } else {
-    spinner.succeed(`Using pull request: ${prInfo.html_url}`);
+    spinner.succeed(`Using pull request: ${pr.html_url}`);
   }
 
-  return prInfo;
+  return pr;
 }
 
 async function processIssue(
@@ -130,7 +121,7 @@ async function processIssue(
   issue: Issue,
   spinner: ora.Ora,
 ) {
-  const {owner, repo, basePath, githubAPI, taskCache, options} = context;
+  const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
   let details: Issue;
   if (issue.pull_request) {
@@ -145,7 +136,7 @@ async function processIssue(
 
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(details),
-    {...options, respectGitignore: true, diff: true},
+    { ...options, respectGitignore: true, diff: true },
     basePath,
   );
 
@@ -170,21 +161,17 @@ async function processIssue(
     );
 
     return;
-  } 
-  const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse, !issue.pull_request);
+  }
+  const branchName = await applyCodeModifications(
+    { ...options, autoCommit: true },
+    basePath,
+    parsedResponse,
+    !issue.pull_request,
+  );
   await githubAPI.pushChanges(owner, repo, branchName);
 
-  if (issue.pull_request) {
-    await githubAPI.addCommentToIssue(
-      owner,
-      repo,
-      issue.number,
-      selectedFiles,
-      parsedResponse,
-      issue.pull_request !== undefined,
-    );
-  } else {
-    await githubAPI.createPullRequest(
+  if (!issue.pull_request) {
+    issue.number = await githubAPI.createPullRequest(
       owner,
       repo,
       issue.number,
@@ -192,8 +179,16 @@ async function processIssue(
       issue.title,
       issue.body,
       parsedResponse,
-    );
+    ).number;
   }
+  await githubAPI.addCommentToIssue(
+    owner,
+    repo,
+    issue.number,
+    selectedFiles,
+    parsedResponse,
+    issue.pull_request !== undefined,
+  );
 }
 
 export async function revisePullRequests(options: AiAssistedTaskOptions) {
@@ -231,10 +226,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
   await revisionLoop();
 }
 
-async function handleRevert(
-  context: PRWorkflowContext,
-  pr: Issue,
-) {
+async function handleRevert(context: PRWorkflowContext, pr: Issue) {
   const { owner, repo, basePath, githubAPI } = context;
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
@@ -275,7 +267,7 @@ async function generateAIResponseForIssue(
   basePath: string,
 ): Promise<string> {
   const modelConfig = getModelConfig(options.model);
-  let templatePath;
+  let templatePath = {};
   const customData = {};
   if (issue.pull_request) {
     customData.var_pullRequest = JSON.stringify(issue);
