@@ -1,4 +1,3 @@
-
 export interface MarkdownOptions {
   template?: string;
   noCodeblock?: boolean;

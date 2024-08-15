@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'fs-extra';
 import simpleGit from 'simple-git';
-import type { PullRequestInfo, TaskData, RevisionAttempt } from '../types';
+import type { PullRequestInfo, RevisionAttempt, TaskData } from '../types';
 
 export class TaskCache {
   private cacheFile: string;
@@ -123,7 +123,10 @@ export class TaskCache {
     return this.revisionAttempts[key] || [];
   }
 
-  async addRevisionAttempt(key: string, attempt: RevisionAttempt): Promise<void> {
+  async addRevisionAttempt(
+    key: string,
+    attempt: RevisionAttempt,
+  ): Promise<void> {
     if (!this.revisionAttempts[key]) {
       this.revisionAttempts[key] = [];
     }

@@ -1,19 +1,19 @@
 import { Octokit } from '@octokit/rest';
+import simpleGit, { type SimpleGit } from 'simple-git';
 import type {
   AIParsedResponse,
   GitHubIssue,
+  Issue,
   PullRequestDetails,
   PullRequestInfo,
-  Issue,
 } from '../types';
 import {
-  ensureValidBranchName,
-  ensureBranch,
   createBranchAndCommit,
-  getGitHubRepoInfo,
+  ensureBranch,
+  ensureValidBranchName,
   findOriginalBranch,
+  getGitHubRepoInfo,
 } from '../utils/git-tools';
-import simpleGit, { SimpleGit } from 'simple-git';
 
 export class GitHubAPI {
   private octokit: Octokit;
@@ -285,22 +285,22 @@ You can reply with instructions such as:
           title: pr.title,
           html_url: pr.html_url,
         };
-      } else {
-        const { data: pullRequests } = await this.octokit.pulls.list({
-          owner,
-          repo,
-          head: `${owner}:${branchName}`,
-          state: 'open',
-        });
+      }
 
-        if (pullRequests.length > 0) {
-          const pr = pullRequests[0];
-          return {
-            number: pr.number,
-            title: pr.title,
-            html_url: pr.html_url,
-          };
-        }
+      const { data: pullRequests } = await this.octokit.pulls.list({
+        owner,
+        repo,
+        head: `${owner}:${branchName}`,
+        state: 'open',
+      });
+
+      if (pullRequests.length > 0) {
+        const pr = pullRequests[0];
+        return {
+          number: pr.number,
+          title: pr.title,
+          html_url: pr.html_url,
+        };
       }
 
       return null;
@@ -328,9 +328,8 @@ You can reply with instructions such as:
     parsedResponse: AIParsedResponse,
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
-
-    const title = `Implement issue #${issueNumber}: ${issueTitle} [AI-generated]`
-    let body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\n`
+    const title = `Implement issue #${issueNumber}: ${issueTitle} [AI-generated]`;
+    let body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\n`;
     if (issueBody) {
       body += `Issue description:\n${issueBody}`;
     }
@@ -456,9 +455,8 @@ You can reply with instructions such as:
       console.error('Error getting default branch:', error);
       if (error instanceof Error) {
         throw new Error(`Failed to get default branch: ${error.message}`);
-      } else {
-        throw new Error('Failed to get default branch: Unknown error');
       }
+      throw new Error('Failed to get default branch: Unknown error');
     }
   }
 
@@ -493,9 +491,8 @@ You can reply with instructions such as:
       console.error('Error creating/updating branch:', error);
       if (error instanceof Error) {
         throw new Error(`Failed to create/update branch: ${error.message}`);
-      } else {
-        throw new Error('Failed to create/update branch: Unknown error');
       }
+      throw new Error('Failed to create/update branch: Unknown error');
     }
   }
 
@@ -512,9 +509,8 @@ You can reply with instructions such as:
       console.error('Error pushing changes:', error);
       if (error instanceof Error) {
         throw new Error(`Failed to push changes: ${error.message}`);
-      } else {
-        throw new Error('Failed to push changes: Unknown error');
       }
+      throw new Error('Failed to push changes: Unknown error');
     }
   }
 

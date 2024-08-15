@@ -20,7 +20,7 @@ import {
   getCachedValue,
   setCachedValue,
 } from '../utils/cache-utils';
-import { ensureBranch, commitAllChanges } from '../utils/git-tools';
+import { commitAllChanges, ensureBranch } from '../utils/git-tools';
 import { TaskCache } from '../utils/task-cache';
 import {
   collectVariables,
@@ -563,12 +563,15 @@ export async function applyCodeModifications(
 ) {
   const spinner = ora('Applying AI Code Modifications...').start();
 
+  let actualBranchname = branchName;
   try {
-    if (!branchName) {
-      branchName = await ensureBranch(
+    if (!actualBranchname) {
+      actualBranchname = await ensureBranch(
         basePath,
         parsedResponse.gitBranchName,
-        { issueNumber: options.issueNumber },
+        {
+          issueNumber: options.issueNumber,
+        },
       );
     }
     await applyChanges({ basePath, parsedResponse, dryRun: false });
@@ -579,11 +582,11 @@ export async function applyCodeModifications(
         : parsedResponse.gitCommitMessage;
       commitAllChanges(basePath, commitMessage);
       spinner.succeed(
-        `AI Code Modifications applied and committed to branch: ${branchName}`,
+        `AI Code Modifications applied and committed to branch: ${actualBranchname}`,
       );
     } else {
       spinner.succeed(
-        `AI Code Modifications applied to branch: ${branchName}`,
+        `AI Code Modifications applied to branch: ${actualBranchname}`,
       );
       console.log(chalk.green('Changes have been applied but not committed.'));
       console.log(
@@ -601,7 +604,7 @@ export async function applyCodeModifications(
         ),
       );
     }
-    return branchName;
+    return actualBranchname;
   } catch (error) {
     spinner.fail('Error applying AI Code Modifications');
     console.error(

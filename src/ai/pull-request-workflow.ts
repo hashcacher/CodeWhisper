@@ -12,6 +12,7 @@ import type {
   Issue,
   PRWorkflowContext,
 } from '../types';
+import { RevisionAttempt } from '../types';
 import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import {
   checkoutBranch,
@@ -23,7 +24,6 @@ import { getTemplatePath } from '../utils/template-utils';
 import { applyChanges } from './apply-changes';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
-import { RevisionAttempt } from '../types';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForIssue } from './select-files';
 import {
@@ -44,12 +44,7 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       return;
     }
 
-    await processIssue(
-      context,
-      pr.number,
-      !!pr.html_url,
-      spinner,
-    );
+    await processIssue(context, pr.number, !!pr.html_url, spinner);
 
     if (await needsRevert(pr, options)) {
       await handleRevert(context, pr);
@@ -140,8 +135,13 @@ async function processIssue(
   const attemptKey = `${owner}/${repo}/${number}`;
   const attempts = await taskCache.getRevisionAttempts(attemptKey);
 
-  if (attempts.length >= 3 && Date.now() - attempts[attempts.length - 3].timestamp < 3600000) {
-    spinner.info(`Skipping issue/PR #${number}: Rate limit exceeded (3 attempts per hour)`);
+  if (
+    attempts.length >= 3 &&
+    Date.now() - attempts[attempts.length - 3].timestamp < 3600000
+  ) {
+    spinner.info(
+      `Skipping issue/PR #${number}: Rate limit exceeded (3 attempts per hour)`,
+    );
     return;
   }
 
@@ -179,12 +179,12 @@ async function processIssue(
     { ...options, autoCommit: true },
     basePath,
     parsedResponse,
-    pull_request ? issue.head.ref : undefined,
+    pullRequest ? issue.head.ref : undefined,
   );
   await githubAPI.pushChanges(owner, repo, branchName);
 
   if (!pull_request) {
-    number = await githubAPI.createPullRequest(
+    issue.number = await githubAPI.createPullRequest(
       owner,
       repo,
       number,
@@ -197,7 +197,7 @@ async function processIssue(
   await githubAPI.addCommentToIssue(
     owner,
     repo,
-    number,
+    issue.number,
     selectedFiles,
     parsedResponse,
     pullRequest,
@@ -220,7 +220,12 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       );
 
       for (const issue of labeledIssues) {
-        await processIssue(context, issue.number, !!issue.pull_request, spinner);
+        await processIssue(
+          context,
+          issue.number,
+          !!issue.pull_request,
+          spinner,
+        );
       }
 
       spinner.succeed(
