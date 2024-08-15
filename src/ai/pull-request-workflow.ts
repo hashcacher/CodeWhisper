@@ -153,6 +153,11 @@ async function processIssue(
     basePath,
   );
 
+  // Check out and pull the branch to ensure we have the latest changes
+  if (pullRequest) {
+    await checkoutBranch(basePath, issue.head.ref);
+  }
+
   const aiResponse = await generateAIResponseForIssue(
     issue,
     selectedFiles,
