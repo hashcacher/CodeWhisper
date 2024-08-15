@@ -172,6 +172,7 @@ async function processIssue(
     return;
   } 
   const branchName = await applyCodeModifications({...options, autoCommit: true}, basePath, parsedResponse);
+  await githubAPI.pushChanges(owner, repo, branchName);
 
   if (issue.pull_request) {
     await githubAPI.addCommentToIssue(
