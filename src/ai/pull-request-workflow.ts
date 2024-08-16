@@ -22,6 +22,7 @@ import {
 } from './task-workflow';
 import {checkoutBranch, commitAllChanges} from '../utils/git-tools';
 import { generateKittenAsciiArt } from '../utils/ascii-art';
+import { generateKittenAsciiArt } from '../utils/ascii-art';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -51,6 +52,9 @@ export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
       if (issueNumber) {
         body = `Closes #${issueNumber}\n\n${body}`;
       }
+
+      const kittenArt = generateKittenAsciiArt();
+      body = `${kittenArt}\n\n${body}`;
 
       spinner.start('Creating new pull request...');
       prInfo = await githubAPI.createPullRequest(
