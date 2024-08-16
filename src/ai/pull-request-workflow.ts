@@ -13,6 +13,7 @@ import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { selectFilesForIssue } from './select-files';
 import { applyCodeModifications, handleDryRun } from './task-workflow';
+import fs from 'fs/promises';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -80,7 +81,6 @@ async function getOrCreatePullRequest(
   );
 
   if (!prInfo) {
-    spinner.text = 'Creating new pull request...';
     spinner.start('Creating new pull request...');
     prInfo = await githubAPI.createPullRequest(
       owner,
@@ -138,9 +138,9 @@ async function processIssue(
 
   if (options.dryRun) {
     await handleDryRun(basePath, parsedResponse, '');
-
     return;
   }
+
   const branchName = await applyCodeModifications(
     { ...options, autoCommit: true },
     basePath,
@@ -195,7 +195,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       console.error(chalk.red('Error:'), error);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1 * 60 * 1000));
+    await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
     spinner.start('Starting next iteration...');
     await revisionLoop();
   }
@@ -233,7 +233,7 @@ async function needsAction(pr: Issue) {
     return true;
   }
 
-  const lastComment = pr.comments[pr.comments?.length - 1];
+  const lastComment = pr.comments[pr.comments.length - 1];
   return !lastComment.body.startsWith('AI-generated');
 }
 
