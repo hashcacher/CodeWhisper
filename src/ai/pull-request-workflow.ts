@@ -135,7 +135,7 @@ async function processIssue(
   const attemptKey = `${owner}/${repo}/${number}`;
   const attempts = await taskCache.getRevisionAttempts(attemptKey);
 
-  const maxRetries = 15;
+  const maxRetries = 25;
   if (
     attempts.length >= maxRetries &&
     Date.now() - attempts[attempts.length - maxRetries].timestamp < 3600000
