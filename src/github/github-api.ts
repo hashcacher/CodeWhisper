@@ -224,6 +224,7 @@ export class GitHubAPI {
             path: reviewComment.path,
           }),
         ),
+        pull_request: true,
       };
     } catch (error) {
       console.error('Error fetching pull request details:', error);

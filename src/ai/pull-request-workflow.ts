@@ -124,12 +124,12 @@ async function processIssue(
   let issue: Issue;
   if (pullRequest) {
     issue = await githubAPI.getPullRequestDetails(owner, repo, number);
+    if (!(await needsAction(issue))) {
+      return;
+    }
+
   } else {
     issue = await githubAPI.getIssueDetails(owner, repo, number);
-  }
-
-  if (!(await needsAction(issue))) {
-    return;
   }
 
   const attemptKey = `${owner}/${repo}/${number}`;
@@ -277,14 +277,7 @@ async function handleRevert(context: PRWorkflowContext, pr: Issue) {
 }
 
 async function needsAction(pr: Issue) {
-  debugger;
-  if (!pr.comments || pr.comments.length === 0) {
-    return true;
-  }
-
-  const lastComment = pr.comments[pr.comments?.length - 1];
-  console.log('Last comment:', lastComment.body)
-  return !lastComment.body.startsWith('AI-generated');
+  return pr.comments!.length > 0;
 }
 
 async function generateAIResponseForIssue(
