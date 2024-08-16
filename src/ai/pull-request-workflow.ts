@@ -277,11 +277,11 @@ async function handleRevert(context: PRWorkflowContext, pr: Issue) {
 }
 
 async function needsAction(pr: Issue) {
+  debugger;
   if (!pr.comments || pr.comments.length === 0) {
     return true;
   }
 
-  debugger;
   const lastComment = pr.comments[pr.comments?.length - 1];
   console.log('Last comment:', lastComment.body)
   return !lastComment.body.startsWith('AI-generated');
