@@ -281,6 +281,7 @@ async function needsAction(pr: Issue) {
     return true;
   }
 
+  debugger;
   const lastComment = pr.comments[pr.comments?.length - 1];
   console.log('Last comment:', lastComment.body)
   return !lastComment.body.startsWith('AI-generated');
