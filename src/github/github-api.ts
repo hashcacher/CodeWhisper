@@ -500,8 +500,6 @@ You can reply with instructions such as:
 
   async pushChanges(
     basePath: string,
-    owner: string,
-    repo: string,
     branchName: string,
   ): Promise<void> {
     try {

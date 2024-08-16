@@ -188,7 +188,7 @@ async function processIssue(
     parsedResponse,
     pullRequest ? issue.head.ref : undefined,
   );
-  await githubAPI.pushChanges(basePath, owner, repo, branchName);
+  await githubAPI.pushChanges(basePath, branchName);
 
   if (!pullRequest) {
     issue.number = await githubAPI.createPullRequest(
@@ -256,7 +256,7 @@ async function handleRevert(context: PRWorkflowContext, pr: Issue) {
   console.log(chalk.yellow('Reverting last commit as requested...'));
   try {
     await revertLastCommit(basePath);
-    await githubAPI.pushChanges(basePath, owner, repo, pr.head.ref);
+    await githubAPI.pushChanges(basePath, pr.head.ref);
     await githubAPI.addCustomCommentToPR(
       owner,
       repo,
