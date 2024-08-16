@@ -133,11 +133,10 @@ async function processIssue(
   const parsedResponse = parseAICodegenResponse(
     aiResponse,
     options.logAiInteractions,
-    true,
   );
 
   if (options.dryRun) {
-    await handleDryRun(basePath, parsedResponse, '');
+    await handleDryRun(basePath, parsedResponse);
     return;
   }
 
@@ -269,7 +268,6 @@ async function generateAIResponseForIssue(
     {
       maxCostThreshold: options.maxCostThreshold,
       model: options.model,
-      contextWindow: options.contextWindow,
       maxTokens: options.maxTokens,
       logAiInteractions: options.logAiInteractions,
     },
