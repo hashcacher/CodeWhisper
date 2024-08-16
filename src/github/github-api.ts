@@ -330,7 +330,7 @@ You can reply with instructions such as:
     parsedResponse: AIParsedResponse,
     baseBranch = 'main',
   ): Promise<PullRequestInfo> {
-    const title = `Implement issue #${issueNumber}: ${issueTitle} [AI-generated]`;
+    const title = `Issue #${issueNumber}: ${issueTitle} [AI-generated]`;
     let body = `AI-generated implementation by CodeWhisper\n\nfix: #${issueNumber}\n\n`;
     if (issueBody) {
       body += `Issue description:\n${issueBody}`;
