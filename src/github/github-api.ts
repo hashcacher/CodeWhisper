@@ -505,9 +505,10 @@ You can reply with instructions such as:
     branchName: string,
   ): Promise<void> {
     try {
+      debugger;
       const git: SimpleGit = simpleGit(basePath);
-      await git.push('origin', branchName);
-      console.log(`Successfully pushed changes to ${branchName}`);
+      const result = await git.push('origin', branchName);
+      console.log(`Successfully pushed changes to ${branchName}. Result: ${result}`);
     } catch (error) {
       console.error('Error pushing changes:', error);
       if (error instanceof Error) {
