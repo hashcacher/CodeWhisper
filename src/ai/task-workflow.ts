@@ -614,6 +614,6 @@ export async function applyCodeModifications(
     console.log(
       chalk.yellow('Please check your Git configuration and try again.'),
     );
-    process.exit(1);
+    throw error;
   }
 }
