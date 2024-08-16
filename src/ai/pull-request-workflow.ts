@@ -220,23 +220,26 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
 
   async function revisionLoop() {
     try {
-      spinner.text = 'Fetching CodeWhisper labeled issues...';
+      spinner.start('Fetching CodeWhisper labeled issues...');
       const labeledIssues = await context.githubAPI.getCodeWhisperLabeledItems(
         context.owner,
         context.repo,
       );
+      spinner.succeed('Fetching CodeWhisper labeled issues completed. Processing issues...');
 
       for (const issue of labeledIssues) {
+        spinner.start(`Processing issue/PR #${issue.number}...`);
         await processIssue(
           context,
           issue.number,
           !!issue.pull_request,
           spinner,
         );
+        spinner.succeed(`Processing issue/PR #${issue.number} completed.`);
       }
 
       spinner.succeed(
-        'Iteration completed. Waiting a minute before next iteration...',
+        'Revise PRs iteration completed. Waiting a minute before next iteration...',
       );
     } catch (error) {
       spinner.fail('Error in pull request revision iteration. Waiting a minute before next iteration...');
