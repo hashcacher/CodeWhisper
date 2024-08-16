@@ -149,6 +149,7 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       'Redo the last task for the specified path. Note: CodeWhisper saves the plan, instructions, model and selected files from the last task. Other options need to be specified again.',
       false,
     )
+    .option('--partial-modifications', 'Allow some modifications to fail and still proceed with task.', false)
     .action(async (options) => {
       if (options.redo) {
         try {
@@ -242,6 +243,7 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       'Set a maximum cost threshold for AI operations in USD (e.g., 0.5 for $0.50)',
       Number.parseFloat,
     )
+    .option('--partial-modifications', 'Allow some modifications to fail and still proceed with the PR.', true)
     .action(async (options) => {
       try {
         await revisePullRequests(options);

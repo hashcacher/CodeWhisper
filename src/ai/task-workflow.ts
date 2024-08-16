@@ -614,6 +614,9 @@ export async function applyCodeModifications(
     console.log(
       chalk.yellow('Please check your Git configuration and try again.'),
     );
+    if (options.partialModifications) {
+      return actualBranchname;
+    }
     throw error;
   }
 }
