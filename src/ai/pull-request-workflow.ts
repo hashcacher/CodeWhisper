@@ -119,7 +119,6 @@ async function processIssue(
   pullRequest: boolean,
   spinner: ora.Ora,
 ) {
-  debugger;
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
   let issue: Issue;
