@@ -50,8 +50,8 @@ export class TaskCache {
     return path.resolve(basePath);
   }
 
-  async getRepoInfo(): Promise<{ owner: string; repo: string } | null> {
-    const git = simpleGit();
+  async getRepoInfo(basePath='.'): Promise<{ owner: string; repo: string } | null> {
+    const git = simpleGit(basePath);
     try {
       const remotes = await git.getRemotes(true);
       const originRemote = remotes.find((remote) => remote.name === 'origin');

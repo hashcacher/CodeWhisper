@@ -64,7 +64,7 @@ async function initializeContext(
   const githubAPI = new GitHubAPI();
   const taskCache = new TaskCache(options.path || process.cwd());
 
-  const repoInfo = await taskCache.getRepoInfo();
+  const repoInfo = await taskCache.getRepoInfo(basePath);
   if (!repoInfo) {
     throw new Error('Unable to determine repository information');
   }
