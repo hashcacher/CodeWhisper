@@ -119,6 +119,7 @@ async function processIssue(
   pullRequest: boolean,
   spinner: ora.Ora,
 ) {
+  debugger;
   const { owner, repo, basePath, githubAPI, taskCache, options } = context;
 
   let issue: Issue;
@@ -191,7 +192,7 @@ async function processIssue(
   await githubAPI.pushChanges(basePath, branchName);
 
   if (!pullRequest) {
-    issue.number = await githubAPI.createPullRequest(
+    issue.number = (await githubAPI.createPullRequest(
       owner,
       repo,
       number,
@@ -199,7 +200,7 @@ async function processIssue(
       issue.title,
       issue.body,
       parsedResponse,
-    ).number;
+    )).number;
   }
   await githubAPI.addCommentToIssue(
     owner,
