@@ -145,8 +145,6 @@ export async function generateAIResponse(
       generateTextOptions.system = options.systemPrompt;
     }
 
-    console.log('Generating AI response...');
-
     const result = await generateText({
       model:
         modelFamily === 'ollama'

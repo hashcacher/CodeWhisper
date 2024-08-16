@@ -314,7 +314,6 @@ async function generateAIResponseForIssue(
     },
   );
 
-  console.log(chalk.cyan('Generating AI response for issue implementation:'));
   return generateAIResponse(
     issueImplementationPrompt,
     {
