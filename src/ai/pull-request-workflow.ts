@@ -23,6 +23,7 @@ import {
 import {checkoutBranch, commitAllChanges} from '../utils/git-tools';
 import { generateKittenAsciiArt } from '../utils/ascii-art';
 import { generateKittenAsciiArt } from '../utils/ascii-art';
+import { generateKittenAsciiArt } from '../utils/ascii-art';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {
   const spinner = ora();
