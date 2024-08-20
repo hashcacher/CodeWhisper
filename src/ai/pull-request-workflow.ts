@@ -223,6 +223,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       const labeledIssues = await context.githubAPI.getCodeWhisperLabeledItems(
         context.owner,
         context.repo,
+        filters: options.githubIssueFilters ?? '',
       );
       spinner.succeed('Fetching CodeWhisper labeled issues completed. Processing issues...');
 

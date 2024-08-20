@@ -370,7 +370,9 @@ You can reply with instructions such as:
   async getCodeWhisperLabeledItems(
     owner: string,
     repo: string,
+    filters: string,
   ): Promise<Issue[]> {
+    const filterObj = this.parseAndMergeFilters(filters);
     try {
       const issues = await this.octokit.paginate(
         this.octokit.issues.listForRepo,
@@ -379,6 +381,7 @@ You can reply with instructions such as:
           repo,
           labels: 'codewhisper',
           state: 'open',
+          ...filterObj,
         },
       );
 
