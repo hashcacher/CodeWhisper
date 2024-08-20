@@ -580,7 +580,7 @@ export async function applyCodeModifications(
       const commitMessage = options.issueNumber
         ? `${parsedResponse.gitCommitMessage} (Closes #${options.issueNumber})`
         : parsedResponse.gitCommitMessage;
-      commitAllChanges(basePath, commitMessage);
+      await commitAllChanges(basePath, commitMessage);
       spinner.succeed(
         `AI Code Modifications applied and committed to branch: ${actualBranchname}`,
       );

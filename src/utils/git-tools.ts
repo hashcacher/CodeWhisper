@@ -3,9 +3,11 @@ import simpleGit, { type SimpleGit } from 'simple-git';
 import { detectLanguage } from '../core/file-worker';
 import type { FileInfo } from '../types';
 
-const git: SimpleGit = simpleGit();
-
-export async function gitDiff(branch?: string): Promise<FileInfo[]> {
+export async function gitDiff(
+  basePath: string,
+  branch?: string,
+): Promise<FileInfo[]> {
+  const git: SimpleGit = simpleGit(basePath);
   const diffSummary = await git.diffSummary([branch ?? 'HEAD^']);
 
   const fileInfos: FileInfo[] = await Promise.all(
