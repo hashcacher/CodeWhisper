@@ -244,6 +244,14 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       Number.parseFloat,
     )
     .option('--partial-modifications', 'Allow some modifications to fail and still proceed with the PR.', true)
+    .option(
+      '--github-issue-filters <filters>',
+      `Use these filters when fetching issues.
+Format: comma-separated key:value pairs.
+Example: labels:p1,assignee:abc
+Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues--parameters for all options.`,
+      '',
+    )
     .action(async (options) => {
       try {
         await revisePullRequests(options);
