@@ -152,6 +152,8 @@ async function processIssue(
   if (pullRequest) {
     console.log('Checking out pull request branch:', issue.head.ref);
     await checkoutBranch(basePath, issue.head.ref);
+  } else {
+    await checkoutBranch(basePath, 'main');
   }
 
   const selectedFiles = await selectFilesForIssue(
@@ -223,7 +225,7 @@ export async function revisePullRequests(options: AiAssistedTaskOptions) {
       const labeledIssues = await context.githubAPI.getCodeWhisperLabeledItems(
         context.owner,
         context.repo,
-        filters: options.githubIssueFilters ?? '',
+        options.githubIssueFilters ?? '',
       );
       spinner.succeed('Fetching CodeWhisper labeled issues completed. Processing issues...');
 
