@@ -157,7 +157,6 @@ async function processIssue(
   const selectedFiles = await selectFilesForIssue(
     JSON.stringify(issue),
     { ...options, respectGitignore: true, diff: true },
-    basePath,
   );
 
   const aiResponse = await generateAIResponseForIssue(

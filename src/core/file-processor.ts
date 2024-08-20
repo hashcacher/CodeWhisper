@@ -91,7 +91,7 @@ export async function getFileList(options: ProcessOptions): Promise<string[]> {
     throw new Error(`Path does not exist: ${basePath}`);
   }
 
-  const gitignorePath = options.gitignore ?? DEFAULT_GITIGNORE;
+  const gitignorePath = options.gitignore ?? path.join(basePath, DEFAULT_GITIGNORE);
 
   const ig = ignore().add(DEFAULT_IGNORES);
 

@@ -15,7 +15,6 @@ import { generateAIResponse } from './generate-ai-response';
 export async function selectFilesForIssue(
   prOrIssue: string,
   options: AiAssistedTaskOptions,
-  basePath: string,
 ): Promise<string[]> {
   // Gather all files in the repository
   const allFiles = await getFileList(options);
