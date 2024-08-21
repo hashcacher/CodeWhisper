@@ -150,6 +150,7 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
       false,
     )
     .option('--partial-modifications', 'Allow some modifications to fail and still proceed with task.', true)
+    .option('--auto-select-files', 'Automatically select files based on the instructions / task description', false)
     .action(async (options) => {
       if (options.redo) {
         try {

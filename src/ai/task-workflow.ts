@@ -34,6 +34,7 @@ import { getTaskDescription } from './get-task-description';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
 import { reviewPlan } from './plan-review';
+import { selectFilesForIssue } from './select-files';
 
 export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
   const spinner = ora();
@@ -57,7 +58,7 @@ export async function runAIAssistedTask(options: AiAssistedTaskOptions) {
       basePath,
       filters,
     );
-    const selectedFiles = await selectFiles(options, basePath);
+    const selectedFiles = await selectFiles(options, basePath, taskDescription, instructions);
 
     spinner.start('Processing files...');
     const processedFiles = await processFiles(
@@ -198,6 +199,9 @@ async function getTaskInfo(
 export async function selectFiles(
   options: AiAssistedTaskOptions,
   basePath: string,
+  taskDescription: string,
+  instructions: string,
+
 ): Promise<string[]> {
   const userFilters = options.filter || [];
 
@@ -209,6 +213,8 @@ export async function selectFiles(
         ? path.join(relativePath, '**/*')
         : relativePath;
     });
+  } else if (options.autoSelectFiles) {
+    selectedFiles = await selectFilesForIssue(`${taskDescription}\n\n${instructions}`, options)
   } else {
     selectedFiles = await selectFilesPrompt(basePath, options.invert ?? false);
   }

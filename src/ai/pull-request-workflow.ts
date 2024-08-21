@@ -29,7 +29,6 @@ import { selectFilesForIssue } from './select-files';
 import {
   applyCodeModifications,
   handleDryRun,
-  selectFiles,
 } from './task-workflow';
 
 export async function runPullRequestWorkflow(options: AiAssistedTaskOptions) {

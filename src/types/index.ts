@@ -57,6 +57,7 @@ export type AiAssistedTaskOptions = Pick<
   diff?: boolean;
   plan?: boolean;
   context?: string[];
+  autoSelectFiles?: boolean;
 };
 
 export type ProcessOptions = Pick<
