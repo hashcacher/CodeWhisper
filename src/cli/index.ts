@@ -93,7 +93,7 @@ export function cli(_args: string[]) {
       parseOptionStringToInt,
       undefined,
     )
-    .option('-g, --gitignore <path>', 'Path to .gitignore file', '.gitignore')
+    .option('-g, --gitignore <path>', 'Path to .gitignore file', undefined)
     .option(
       '-f, --filter <patterns...>',
       'File patterns to include (use glob patterns, e.g., "src/**/*.js")',
@@ -228,9 +228,9 @@ Note: see "query parameters" at https://docs.github.com/en/rest/issues/issues?ap
     });
 
   program
-    .command('revise-prs')
+    .command('auto-issues')
     .description(
-      'Continuously revise pull requests with the "codewhisper" label',
+      'Continuously revise pull requests and issues with the "codewhisper" label',
     )
     .option('-p, --path <path>', 'Path to the codebase', '.')
     .option('-m, --model <modelId>', 'Specify the AI model to use')

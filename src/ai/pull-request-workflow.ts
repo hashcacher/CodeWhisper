@@ -7,12 +7,10 @@ import { processFiles } from '../core/file-processor';
 import { generateMarkdown } from '../core/markdown-generator';
 import { GitHubAPI } from '../github/github-api';
 import type {
-  AIParsedResponse,
   AiAssistedTaskOptions,
   Issue,
   PRWorkflowContext,
 } from '../types';
-import { RevisionAttempt } from '../types';
 import { extractIssueNumberFromBranch } from '../utils/branch-utils';
 import {
   checkoutBranch,
@@ -21,7 +19,6 @@ import {
 } from '../utils/git-tools';
 import { TaskCache } from '../utils/task-cache';
 import { getTemplatePath } from '../utils/template-utils';
-import { applyChanges } from './apply-changes';
 import { generateAIResponse } from './generate-ai-response';
 import { getModelConfig } from './model-config';
 import { parseAICodegenResponse } from './parse-ai-codegen-response';
